@@ -425,7 +425,7 @@ export function deckPreprocessor(): PreprocessorGroup {
       const presentationContent = slideOutputs.join("\n\n");
       const styleBlock = styles.length > 0 ? "\n" + styles.join("\n") : "";
 
-      const code = `${scriptBlock}\n\n<Presentation options={{ width: 1280, height: 720, margin: 0, hash: true, transition: "none", disableLayout: false, viewDistance: 10 }}>\n${presentationContent}\n</Presentation>${styleBlock}\n`;
+      const code = `${scriptBlock}\n\n<Presentation options={{ width: 1280, height: 720, margin: 0, hash: true, hashOneBasedIndex: true, controls: false, navigationMode: "linear", transition: "none", disableLayout: false, viewDistance: 10 }}>\n${presentationContent}\n</Presentation>${styleBlock}\n`;
 
       return { code };
     },
