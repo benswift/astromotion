@@ -1,10 +1,13 @@
 # astromotion
 
-An unholy mixture of [Astro](https://astro.build),
-[Svelte](https://svelte.dev), [Animotion](https://animotion.pages.dev)
-(and therefore [Reveal.js](https://revealjs.com)), with a bit of
-[Marp](https://marp.app) syntax mixed in --- for markdown-authored slide decks
-in Astro sites.
+An unholy mixture of [Astro](https://astro.build), [Svelte](https://svelte.dev),
+[Animotion](https://animotion.pages.dev) (and therefore
+[Reveal.js](https://revealjs.com)), with a bit of [Marp](https://marp.app)
+syntax mixed in --- for markdown-authored slide decks in Astro sites.
+
+This is shared in the spirit of openness and bonhomie, but it's really quite
+idiosyncratic, and I don't expect anyone apart from
+[me](https://github.com/benswift/) is going to find it useful.
 
 ## Install
 
@@ -31,10 +34,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { astromotion, deckPreprocessor } from "astromotion";
 
 export default defineConfig({
-  integrations: [
-    svelte({ preprocess: [deckPreprocessor()] }),
-    astromotion(),
-  ],
+  integrations: [svelte({ preprocess: [deckPreprocessor()] }), astromotion()],
   vite: {
     plugins: [tailwindcss()],
   },
@@ -98,8 +98,8 @@ Borrowed from Marp syntax:
 
 - `<!-- _class: impact -->` --- set slide CSS class (`impact`, `banner`,
   `quote`, `centered`)
-- `<!-- notes: Speaker notes here -->` --- presenter notes (visible in
-  Reveal.js speaker view)
+- `<!-- notes: Speaker notes here -->` --- presenter notes (visible in Reveal.js
+  speaker view)
 
 ### Background images
 
@@ -130,8 +130,8 @@ Generates an animated SVG QR code linking to the URL.
 
 ### Code blocks
 
-Fenced code blocks are rendered using Animotion's `<Code>` component with
-syntax highlighting.
+Fenced code blocks are rendered using Animotion's `<Code>` component with syntax
+highlighting.
 
 ### Animotion components
 
@@ -150,20 +150,20 @@ The default theme uses an ANU gold/copper/teal colour palette with Public Sans.
 To use your own theme, pass the path to the integration:
 
 ```js
-astromotion({ theme: "./src/my-theme.css" })
+astromotion({ theme: "./src/my-theme.css" });
 ```
 
 Your theme CSS replaces the default entirely --- import `@animotion/core/theme`
-and define your own styles. See `theme/default.css` in this package for the
-full structure.
+and define your own styles. See `theme/default.css` in this package for the full
+structure.
 
 ## Options
 
 ```ts
 astromotion({
-  theme: "./src/my-theme.css",  // custom theme CSS path (default: built-in)
-  injectRoutes: true,           // inject /decks/[...slug] route (default: true)
-})
+  theme: "./src/my-theme.css", // custom theme CSS path (default: built-in)
+  injectRoutes: true, // inject /decks/[...slug] route (default: true)
+});
 ```
 
 If you set `injectRoutes: false`, you'll need to create your own route pages.
@@ -229,4 +229,4 @@ node node_modules/astromotion/scripts/deck-pdf.mjs my-talk output.pdf
 
 ## Licence
 
-MIT --- Copyright (c) Ben Swift
+MIT --- (c) Ben Swift
