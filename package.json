@@ -1,0 +1,34 @@
+{
+  "name": "astromotion",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "An unholy mixture of Astro, Svelte, Animotion (Reveal.js), and a bit of Marp syntax for markdown-authored slide decks",
+  "author": "Ben Swift",
+  "license": "MIT",
+  "exports": {
+    ".": "./index.ts",
+    "./components/*": "./components/*",
+    "./pages/*": "./pages/*",
+    "./theme/*": "./theme/*",
+    "./src/*": "./src/*",
+    "./sveltekit-shims/*": "./sveltekit-shims/*"
+  },
+  "dependencies": {
+    "@qrgrid/core": "^0.2.4",
+    "rehype-stringify": "^10.0.1",
+    "remark-frontmatter": "^5.0.0",
+    "remark-gfm": "^4.0.1",
+    "remark-parse": "^11.0.0",
+    "remark-rehype": "^11.1.2",
+    "smartypants": "^0.2.2",
+    "unified": "^11.0.5",
+    "yaml": "^2.8.2"
+  },
+  "peerDependencies": {
+    "@animotion/core": "^1.0.0",
+    "@astrojs/svelte": "^8.0.0",
+    "@tailwindcss/vite": "^4.0.0",
+    "astro": "^6.0.0",
+    "svelte": "^5.0.0"
+  }
+}

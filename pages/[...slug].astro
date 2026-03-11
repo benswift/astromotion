@@ -1,0 +1,41 @@
+---
+import DeckLayout from "../components/DeckLayout.astro";
+import DeckLoader from "../components/DeckLoader.svelte";
+import { parseDeckFrontmatter } from "../src/meta.ts";
+import fs from "node:fs";
+import path from "node:path";
+
+export function getStaticPaths() {
+  const decksDir = path.resolve("src/decks");
+  const results: Array<{ params: { slug: string }; props: { title: string; description?: string; image?: string; deckPath: string } }> = [];
+
+  for (const dir of fs.readdirSync(decksDir, { withFileTypes: true })) {
+    if (!dir.isDirectory()) continue;
+    const dirPath = path.join(decksDir, dir.name);
+
+    for (const file of fs.readdirSync(dirPath)) {
+      const match = file.match(/^(.+)\.deck\.svelte$/);
+      if (!match) continue;
+
+      const name = match[1];
+      const raw = fs.readFileSync(path.join(dirPath, file), "utf-8");
+      const { data } = parseDeckFrontmatter(raw, dir.name);
+      const slug = name === "slides" ? dir.name : `${dir.name}/${name}`;
+      const deckPath = `/src/decks/${dir.name}/${file}`;
+
+      results.push({
+        params: { slug },
+        props: { title: data.title ?? dir.name, description: data.description, image: data.image, deckPath },
+      });
+    }
+  }
+
+  return results;
+}
+
+const { title, description, image, deckPath } = Astro.props;
+---
+
+<DeckLayout title={title} description={description} image={image}>
+  <DeckLoader deckPath={deckPath} client:only="svelte" />
+</DeckLayout>
