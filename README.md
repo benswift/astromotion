@@ -169,7 +169,21 @@ underneath):
 @import "@animotion/core/theme";
 ```
 
-Then add your own styles. At a minimum you'll want to set:
+Then add your own styles.
+
+### Sharing styles between your site and your decks
+
+If your Astro site and your slide decks share a visual identity (colours, brand
+tokens, widget styles), extract the common CSS custom properties into a shared
+file (e.g. `src/styles/common.css`) and `@import` it from both your site's
+global stylesheet and your deck theme. This keeps values in sync without hacks.
+
+Keep context-specific things separate --- the website and decks have
+fundamentally different rendering models (responsive layout vs a fixed
+1280×720 viewport scaled to fill the screen), so root font size, layout tokens,
+and Reveal.js `--r-*` variables should stay in their respective files.
+
+At a minimum you'll want to set:
 
 - **Reveal.js CSS variables** --- `--r-background-color`, `--r-main-color`,
   `--r-main-font`, `--r-main-font-size`, `--r-heading-color`, `--r-heading-font`,
