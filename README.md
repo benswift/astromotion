@@ -49,19 +49,25 @@ The integration handles:
 
 ## Writing slides
 
-Create `.deck.svelte` files in `src/decks/<slug>/`:
+Create `.deck.svx` files in `src/decks/`:
 
 ```
 src/decks/
-  my-talk/
-    slides.deck.svelte      -> /decks/my-talk/
-    bonus.deck.svelte        -> /decks/my-talk/bonus/
-    assets/
-      photo.jpg
+  my-talk.deck.svx            -> /decks/my-talk/
+  assets/
+    photo.jpg
 ```
 
-A file named `slides.deck.svelte` maps to the folder root URL. Other names
-become sub-paths.
+Top-level files use the filename stem as the slug. Subdirectories also work ---
+a file named `slides.deck.svx` maps to the folder root URL, and other names
+become sub-paths:
+
+```
+src/decks/
+  my-series/
+    slides.deck.svx           -> /decks/my-series/
+    bonus.deck.svx            -> /decks/my-series/bonus/
+```
 
 ### Slide syntax
 
@@ -255,15 +261,22 @@ import path from "node:path";
 const decksDir = path.resolve("src/decks");
 const decks = [];
 
-for (const dir of fs.readdirSync(decksDir, { withFileTypes: true })) {
-  if (!dir.isDirectory()) continue;
-  for (const file of fs.readdirSync(path.join(decksDir, dir.name))) {
-    const match = file.match(/^(.+)\.deck\.svelte$/);
+for (const entry of fs.readdirSync(decksDir, { withFileTypes: true })) {
+  if (entry.isDirectory()) {
+    for (const file of fs.readdirSync(path.join(decksDir, entry.name))) {
+      const match = file.match(/^(.+)\.deck\.svx$/);
+      if (!match) continue;
+      const raw = fs.readFileSync(path.join(decksDir, entry.name, file), "utf-8");
+      const { data } = parseDeckFrontmatter(raw, entry.name);
+      const slug = match[1] === "slides" ? entry.name : `${entry.name}/${match[1]}`;
+      decks.push({ slug, title: data.title ?? slug, description: data.description });
+    }
+  } else if (entry.isFile()) {
+    const match = entry.name.match(/^(.+)\.deck\.svx$/);
     if (!match) continue;
-    const raw = fs.readFileSync(path.join(decksDir, dir.name, file), "utf-8");
-    const { data } = parseDeckFrontmatter(raw, dir.name);
-    const slug = match[1] === "slides" ? dir.name : `${dir.name}/${match[1]}`;
-    decks.push({ slug, title: data.title ?? slug, description: data.description });
+    const raw = fs.readFileSync(path.join(decksDir, entry.name), "utf-8");
+    const { data } = parseDeckFrontmatter(raw, match[1]);
+    decks.push({ slug: match[1], title: data.title ?? match[1], description: data.description });
   }
 }
 

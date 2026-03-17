@@ -10,7 +10,7 @@ import { generateLogoSlide } from "./svg/logo-slide.js";
 import { generateQrCode } from "./svg/qr-code.js";
 import { smartypants } from "smartypants";
 
-const DECK_FILE_PATTERN = /\.deck\.svelte$/;
+const DECK_FILE_PATTERN = /\.deck\.svx$/;
 const LOGO_CLASS_RE = /^(anu-logo|socy-logo)$/;
 const ANIMOTION_COMPONENT_RE =
   /<(?:Action|Code|Transition|Embed|Recorder|Slides)\b/;
