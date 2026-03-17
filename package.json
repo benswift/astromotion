@@ -5,6 +5,9 @@
   "description": "An unholy mixture of Astro, Svelte, Animotion (Reveal.js), and a bit of Marp syntax for markdown-authored slide decks",
   "author": "Ben Swift",
   "license": "MIT",
+  "scripts": {
+    "test": "vitest run"
+  },
   "exports": {
     ".": "./index.ts",
     "./components/*": "./components/*",
@@ -30,5 +33,8 @@
     "@tailwindcss/vite": "^4.0.0",
     "astro": "^6.0.0",
     "svelte": "^5.0.0"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.0"
   }
 }
