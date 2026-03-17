@@ -1,5 +1,7 @@
 import type { PreprocessorGroup } from "svelte/compiler";
 import type { Root, RootContent, Code, Html } from "mdast";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
@@ -11,6 +13,7 @@ import { generateQrCode } from "./svg/qr-code.js";
 import { smartypants } from "smartypants";
 
 const DECK_FILE_PATTERN = /\.deck\.svx$/;
+const INCLUDE_RE = /^<!--\s*@include\s+(\S+)\s*-->$/;
 const LOGO_CLASS_RE = /^(anu-logo|socy-logo)$/;
 const ANIMOTION_COMPONENT_RE =
   /<(?:Action|Code|Transition|Embed|Recorder|Slides)\b/;
@@ -99,6 +102,21 @@ function parseBgModifiers(modifiers: string): Omit<BgImage, "url"> {
   if (filterParts.length > 0) result.filters = filterParts.join(" ");
 
   return result;
+}
+
+function resolveIncludes(root: Root, dir: string): void {
+  const children = root.children;
+  for (let i = 0; i < children.length; i++) {
+    const node = children[i];
+    if (node.type !== "html") continue;
+    const match = (node as Html).value.match(INCLUDE_RE);
+    if (!match) continue;
+    const includePath = resolve(dir, match[1]);
+    const includeContent = readFileSync(includePath, "utf-8");
+    const included = parseProcessor.parse(includeContent);
+    children.splice(i, 1, ...included.children);
+    i += included.children.length - 1;
+  }
 }
 
 function splitAtThematicBreaks(nodes: RootContent[]): RootContent[][] {
@@ -325,6 +343,7 @@ export function deckPreprocessor(): PreprocessorGroup {
       }
 
       const root = parseProcessor.parse(content);
+      resolveIncludes(root, dirname(filename));
       const { scripts, styles, content: contentNodes } = separateAstNodes(root);
 
       if (contentNodes.length === 0) {
