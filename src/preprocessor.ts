@@ -260,12 +260,12 @@ function buildSplitWrapper(images: BgImage[], innerHtml: string): string {
   return `<div class="split-layout">${contentDiv}${imageDiv}</div>`;
 }
 
-function codeNodeToComponent(node: Code): string {
+function codeNodeToComponent(node: Code, theme: string): string {
   const lang = node.lang || "text";
-  return `<Code code={${JSON.stringify(node.value)}} lang="${lang}" theme="poimandres" />`;
+  return `<Code code={${JSON.stringify(node.value)}} lang="${lang}" theme="${theme}" />`;
 }
 
-async function processSlideContent(nodes: RootContent[]): Promise<string> {
+async function processSlideContent(nodes: RootContent[], codeTheme: string): Promise<string> {
   const parts: string[] = [];
   let htmlBatch: RootContent[] = [];
 
@@ -279,7 +279,7 @@ async function processSlideContent(nodes: RootContent[]): Promise<string> {
   for (const node of nodes) {
     if (node.type === "code") {
       await flushHtmlBatch();
-      parts.push(codeNodeToComponent(node as Code));
+      parts.push(codeNodeToComponent(node as Code, codeTheme));
     } else {
       htmlBatch.push(node);
     }
@@ -334,7 +334,13 @@ function buildScriptBlock(
   return lines.join("\n");
 }
 
-export function deckPreprocessor(): PreprocessorGroup {
+interface DeckPreprocessorOptions {
+  codeTheme?: string;
+}
+
+export function deckPreprocessor(options: DeckPreprocessorOptions = {}): PreprocessorGroup {
+  const codeTheme = options.codeTheme ?? "vitesse-dark";
+
   return {
     name: "deck-preprocessor",
     async markup({ content, filename }) {
@@ -411,7 +417,7 @@ export function deckPreprocessor(): PreprocessorGroup {
           innerHtml = groupText.replace(QR_IMAGE_RE, (_, url) => generateQrCode(url));
         } else {
           const afterQr = replaceQrImagesInAst(afterBg);
-          innerHtml = await processSlideContent(afterQr);
+          innerHtml = await processSlideContent(afterQr, codeTheme);
         }
 
         innerHtml = innerHtml.replace(
