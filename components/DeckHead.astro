@@ -6,8 +6,9 @@ interface Props {
 }
 
 const { title, description = "Slide deck", image = "/og-image.svg" } = Astro.props;
-const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
-const imageUrl = new URL(image, Astro.site);
+const base = Astro.site ?? Astro.url;
+const canonicalUrl = new URL(Astro.url.pathname, base);
+const imageUrl = new URL(image, base);
 ---
 
 <meta charset="utf-8" />
