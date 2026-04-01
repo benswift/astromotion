@@ -30,7 +30,6 @@
   "peerDependencies": {
     "@animotion/core": "^1.0.0",
     "@astrojs/svelte": "^8.0.0",
-    "@tailwindcss/vite": "^4.0.0",
     "astro": "^6.0.0",
     "svelte": "^5.0.0"
   },

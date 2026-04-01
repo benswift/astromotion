@@ -20,7 +20,7 @@ npm install github:benswift/astromotion
 You also need these in your project:
 
 ```sh
-npm install astro @astrojs/svelte svelte @animotion/core @tailwindcss/vite
+npm install astro @astrojs/svelte svelte @animotion/core
 ```
 
 ## Setup
@@ -30,14 +30,10 @@ In your `astro.config.mjs`:
 ```js
 import { defineConfig } from "astro/config";
 import svelte from "@astrojs/svelte";
-import tailwindcss from "@tailwindcss/vite";
 import { astromotion, deckPreprocessor } from "astromotion";
 
 export default defineConfig({
   integrations: [svelte({ preprocess: [deckPreprocessor()] }), astromotion()],
-  vite: {
-    plugins: [tailwindcss()],
-  },
 });
 ```
 
@@ -170,8 +166,6 @@ Your theme should start with these imports (the structural defaults layer
 underneath):
 
 ```css
-@import "tailwindcss" source(none);
-@source "./";
 @import "@animotion/core/theme";
 ```
 
