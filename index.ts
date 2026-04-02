@@ -9,7 +9,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export interface AstromotionOptions {
   theme?: string;
   injectRoutes?: boolean;
-  codeTheme?: string;
+  codeTheme?: string | Record<string, unknown>;
 }
 
 export function astromotion(options: AstromotionOptions = {}): AstroIntegration {
@@ -22,6 +22,9 @@ export function astromotion(options: AstromotionOptions = {}): AstroIntegration 
     name: "astromotion",
     hooks: {
       "astro:config:setup"({ updateConfig, injectRoute }) {
+        const codeThemeValue = options.codeTheme ?? "vitesse-dark";
+        const codeThemeModule = `export default ${JSON.stringify(codeThemeValue)};`;
+
         updateConfig({
           vite: {
             resolve: {
@@ -29,7 +32,18 @@ export function astromotion(options: AstromotionOptions = {}): AstroIntegration 
                 "virtual:astromotion/theme": themePath,
               },
             },
-            plugins: [deckPlugin({ codeTheme: options.codeTheme })],
+            plugins: [
+              deckPlugin({ codeTheme: options.codeTheme }),
+              {
+                name: "astromotion-config",
+                resolveId(id) {
+                  if (id === "virtual:astromotion/code-theme") return "\0astromotion-code-theme";
+                },
+                load(id) {
+                  if (id === "\0astromotion-code-theme") return codeThemeModule;
+                },
+              },
+            ],
           },
         });
 

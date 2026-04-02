@@ -325,7 +325,7 @@ function replaceRelativeImgSrcs(
 }
 
 interface DeckPluginOptions {
-  codeTheme?: string;
+  codeTheme?: string | Record<string, unknown>;
 }
 
 export function deckPlugin(options: DeckPluginOptions = {}): Plugin {
@@ -440,10 +440,13 @@ export function deckPlugin(options: DeckPluginOptions = {}): Plugin {
   };
 }
 
-async function createHtmlProcessor(codeTheme: string) {
+async function createHtmlProcessor(codeTheme: string | Record<string, unknown>) {
+  const shikiOptions = typeof codeTheme === "string"
+    ? { theme: codeTheme }
+    : codeTheme;
   return unified()
     .use(remarkRehype, { allowDangerousHtml: true })
-    .use(rehypeShiki, { theme: codeTheme })
+    .use(rehypeShiki, shikiOptions as any)
     .use(rehypeStringify, { allowDangerousHtml: true });
 }
 

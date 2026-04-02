@@ -3,6 +3,7 @@ import DeckLayout from "../components/DeckLayout.astro";
 import DeckLoader from "../components/DeckLoader.svelte";
 import { parseDeckFrontmatter } from "../src/meta.ts";
 import { processDeckMarkdown } from "../src/vite-plugin.ts";
+import codeTheme from "virtual:astromotion/code-theme";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -31,7 +32,7 @@ export async function getStaticPaths() {
 
         let slidesHtml = "";
         if (!isSvelte) {
-          slidesHtml = await processDeckMarkdown(raw, path.join(dirPath, file));
+          slidesHtml = await processDeckMarkdown(raw, path.join(dirPath, file), { codeTheme });
         }
 
         results.push({
@@ -53,7 +54,7 @@ export async function getStaticPaths() {
 
       let slidesHtml = "";
       if (!isSvelte) {
-        slidesHtml = await processDeckMarkdown(raw, path.join(decksDir, entry.name));
+        slidesHtml = await processDeckMarkdown(raw, path.join(decksDir, entry.name), { codeTheme });
       }
 
       results.push({
