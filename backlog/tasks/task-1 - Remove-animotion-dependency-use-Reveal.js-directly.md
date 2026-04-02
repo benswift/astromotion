@@ -1,7 +1,7 @@
 ---
 id: TASK-1
 title: 'Remove animotion dependency, use Reveal.js directly'
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-04-02 11:23'
 labels:

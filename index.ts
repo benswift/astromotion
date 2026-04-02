@@ -1,17 +1,19 @@
 import type { AstroIntegration } from "astro";
-import { dirname, resolve } from "node:path";
+import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { dirname } from "node:path";
+import { deckPlugin } from "./src/vite-plugin.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export interface AstromotionOptions {
   theme?: string;
   injectRoutes?: boolean;
+  codeTheme?: string;
 }
 
 export function astromotion(options: AstromotionOptions = {}): AstroIntegration {
   const { injectRoutes = true } = options;
-  const shimPath = resolve(__dirname, "sveltekit-shims/environment.js");
   const themePath = options.theme
     ? resolve(options.theme)
     : resolve(__dirname, "theme/default.css");
@@ -24,25 +26,10 @@ export function astromotion(options: AstromotionOptions = {}): AstroIntegration 
           vite: {
             resolve: {
               alias: {
-                "$app/environment": shimPath,
                 "virtual:astromotion/theme": themePath,
               },
             },
-            optimizeDeps: {
-              esbuildOptions: {
-                plugins: [
-                  {
-                    name: "astromotion-shims",
-                    setup(build) {
-                      build.onResolve(
-                        { filter: /^\$app\/environment$/ },
-                        () => ({ path: shimPath }),
-                      );
-                    },
-                  },
-                ],
-              },
-            },
+            plugins: [deckPlugin({ codeTheme: options.codeTheme })],
           },
         });
 
@@ -58,4 +45,5 @@ export function astromotion(options: AstromotionOptions = {}): AstroIntegration 
 }
 
 export { deckPreprocessor } from "./src/preprocessor.ts";
+export { deckPlugin } from "./src/vite-plugin.ts";
 export { parseDeckFrontmatter } from "./src/meta.ts";

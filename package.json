@@ -2,7 +2,7 @@
   "name": "astromotion",
   "version": "0.1.0",
   "type": "module",
-  "description": "An unholy mixture of Astro, Svelte, Animotion (Reveal.js), and a bit of Marp syntax for markdown-authored slide decks",
+  "description": "Astro integration for markdown-authored slide decks powered by Reveal.js, with a bit of Marp syntax",
   "author": "Ben Swift",
   "license": "MIT",
   "scripts": {
@@ -13,25 +13,33 @@
     "./components/*": "./components/*",
     "./pages/*": "./pages/*",
     "./theme/*": "./theme/*",
-    "./src/*": "./src/*",
-    "./sveltekit-shims/*": "./sveltekit-shims/*"
+    "./src/*": "./src/*"
   },
   "dependencies": {
     "@qrgrid/core": "^0.2.4",
+    "@shikijs/rehype": "^3.4.2",
     "rehype-stringify": "^10.0.1",
     "remark-frontmatter": "^5.0.0",
     "remark-gfm": "^4.0.1",
     "remark-parse": "^11.0.0",
     "remark-rehype": "^11.1.2",
+    "reveal.js": "^5.2.1",
     "smartypants": "^0.2.2",
     "unified": "^11.0.5",
     "yaml": "^2.8.2"
   },
   "peerDependencies": {
-    "@animotion/core": "^1.0.0",
     "@astrojs/svelte": "^8.0.0",
     "astro": "^6.0.0",
     "svelte": "^5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@astrojs/svelte": {
+      "optional": true
+    },
+    "svelte": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "vitest": "^4.1.0"

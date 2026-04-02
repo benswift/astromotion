@@ -1,5 +1,5 @@
 import type { PreprocessorGroup } from "svelte/compiler";
-import type { Root, RootContent, Code, Html } from "mdast";
+import type { Root, RootContent, Html } from "mdast";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { unified } from "unified";
@@ -7,24 +7,18 @@ import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
 import remarkFrontmatter from "remark-frontmatter";
 import remarkRehype from "remark-rehype";
+import rehypeShiki from "@shikijs/rehype";
 import rehypeStringify from "rehype-stringify";
 import { generateLogoSlide } from "./svg/logo-slide.js";
 import { generateQrCode } from "./svg/qr-code.js";
 import { smartypants } from "smartypants";
 
-const DECK_FILE_PATTERN = /\.deck\.svx$/;
+const DECK_FILE_PATTERN = /\.deck\.svelte$/;
 const INCLUDE_RE = /^<!--\s*@include\s+(\S+)\s*-->$/;
 const LOGO_CLASS_RE = /^(anu-logo|socy-logo)$/;
-const ANIMOTION_COMPONENT_RE =
-  /<(?:Action|Code|Transition|Embed|Recorder|Slides)\b/;
 const QR_IMAGE_RE = /!\[qr\]\(([^)]+)\)/g;
 
-const AUTO_IMPORTS = [
-  'import { Presentation, Slide, Action, Code, Notes, Transition, getPresentation } from "@animotion/core";',
-  'import "@animotion/core/theme";',
-];
-
-const REVEAL_BRIDGE = '  const __p = getPresentation(); $effect(() => { if (__p.slides) window.Reveal = __p.slides; });';
+const REVEAL_OPTIONS = `{ width: 1280, height: 720, margin: 0, hash: true, hashOneBasedIndex: true, controls: false, navigationMode: "linear", transition: "none", disableLayout: false, viewDistance: 10 }`;
 
 interface BgImage {
   url: string;
@@ -38,9 +32,12 @@ interface BgImage {
 
 const parseProcessor = unified().use(remarkParse).use(remarkGfm).use(remarkFrontmatter);
 
-const htmlProcessor = unified()
-  .use(remarkRehype, { allowDangerousHtml: true })
-  .use(rehypeStringify, { allowDangerousHtml: true });
+async function createHtmlProcessor(codeTheme: string) {
+  return unified()
+    .use(remarkRehype, { allowDangerousHtml: true })
+    .use(rehypeShiki, { theme: codeTheme })
+    .use(rehypeStringify, { allowDangerousHtml: true });
+}
 
 function separateAstNodes(root: Root): {
   scripts: string[];
@@ -198,10 +195,10 @@ export function replaceQrImagesInAst(nodes: RootContent[]): RootContent[] {
   });
 }
 
-async function astToHtml(nodes: RootContent[]): Promise<string> {
+async function astToHtml(nodes: RootContent[], processor: any): Promise<string> {
   const root: Root = { type: "root", children: nodes };
-  const hast = await htmlProcessor.run(root);
-  return htmlProcessor.stringify(hast) as string;
+  const hast = await processor.run(root);
+  return processor.stringify(hast) as string;
 }
 
 function sliceNodesText(nodes: RootContent[], text: string): string {
@@ -260,35 +257,6 @@ function buildSplitWrapper(images: BgImage[], innerHtml: string): string {
   return `<div class="split-layout">${contentDiv}${imageDiv}</div>`;
 }
 
-function codeNodeToComponent(node: Code, theme: string): string {
-  const lang = node.lang || "text";
-  return `<Code code={${JSON.stringify(node.value)}} lang="${lang}" theme="${theme}" />`;
-}
-
-async function processSlideContent(nodes: RootContent[], codeTheme: string): Promise<string> {
-  const parts: string[] = [];
-  let htmlBatch: RootContent[] = [];
-
-  async function flushHtmlBatch() {
-    if (htmlBatch.length > 0) {
-      parts.push(await astToHtml(htmlBatch));
-      htmlBatch = [];
-    }
-  }
-
-  for (const node of nodes) {
-    if (node.type === "code") {
-      await flushHtmlBatch();
-      parts.push(codeNodeToComponent(node as Code, codeTheme));
-    } else {
-      htmlBatch.push(node);
-    }
-  }
-  await flushHtmlBatch();
-
-  return parts.join("\n");
-}
-
 function buildScriptBlock(
   userScripts: string[],
   imageImports: Map<string, string>,
@@ -307,13 +275,8 @@ function buildScriptBlock(
 
   const lines: string[] = [];
   lines.push(`<script${scriptAttrs}>`);
-
-  for (const imp of AUTO_IMPORTS) {
-    const modPath = imp.match(/from\s+"([^"]+)"/)?.[1] || imp.match(/import\s+"([^"]+)"/)?.[1];
-    if (modPath && !userBody.includes(modPath)) {
-      lines.push(`  ${imp}`);
-    }
-  }
+  lines.push(`  import Reveal from "reveal.js";`);
+  lines.push(`  import { onMount } from "svelte";`);
 
   for (const [url, varName] of imageImports) {
     const importPath = url.startsWith("./") || url.startsWith("../") ? url : `./${url}`;
@@ -324,7 +287,13 @@ function buildScriptBlock(
     lines.push(userBody.trimEnd());
   }
 
-  lines.push(REVEAL_BRIDGE);
+  lines.push("");
+  lines.push("  let revealEl: HTMLDivElement;");
+  lines.push("  onMount(() => {");
+  lines.push(`    const deck = new Reveal(revealEl, ${REVEAL_OPTIONS});`);
+  lines.push("    deck.initialize();");
+  lines.push("    return () => deck.destroy();");
+  lines.push("  });");
 
   for (const decl of bgHtmlDecls) {
     lines.push(`  ${decl}`);
@@ -340,12 +309,17 @@ interface DeckPreprocessorOptions {
 
 export function deckPreprocessor(options: DeckPreprocessorOptions = {}): PreprocessorGroup {
   const codeTheme = options.codeTheme ?? "vitesse-dark";
+  let htmlProcessor: any = null;
 
   return {
     name: "deck-preprocessor",
     async markup({ content, filename }) {
       if (!filename || !DECK_FILE_PATTERN.test(filename)) {
         return undefined;
+      }
+
+      if (!htmlProcessor) {
+        htmlProcessor = await createHtmlProcessor(codeTheme);
       }
 
       const root = parseProcessor.parse(content);
@@ -374,10 +348,10 @@ export function deckPreprocessor(options: DeckPreprocessorOptions = {}): Preproc
           const logoSvg = generateLogoSlide(variant);
           const slideAttrs = buildSlideAttrs(slideClass);
           const notesTag = notesContent
-            ? `\n    <Notes>${notesContent}</Notes>`
+            ? `\n    <div class="notes">${notesContent}</div>`
             : "";
           slideOutputs.push(
-            `  <Slide${slideAttrs}>\n    ${logoSvg}${notesTag}\n  </Slide>`,
+            `  <section${slideAttrs}>\n    ${logoSvg}${notesTag}\n  </section>`,
           );
           continue;
         }
@@ -410,15 +384,8 @@ export function deckPreprocessor(options: DeckPreprocessorOptions = {}): Preproc
           }
         }
 
-        let innerHtml: string;
-        const groupText = sliceNodesText(afterBg, content);
-
-        if (ANIMOTION_COMPONENT_RE.test(groupText)) {
-          innerHtml = groupText.replace(QR_IMAGE_RE, (_, url) => generateQrCode(url));
-        } else {
-          const afterQr = replaceQrImagesInAst(afterBg);
-          innerHtml = await processSlideContent(afterQr, codeTheme);
-        }
+        const afterQr = replaceQrImagesInAst(afterBg);
+        let innerHtml = await astToHtml(afterQr, htmlProcessor);
 
         innerHtml = innerHtml.replace(
           /<img\b([^>]*?)\bsrc=["'](\.\.?\/[^"']+)["']([^>]*?)>/g,
@@ -438,19 +405,19 @@ export function deckPreprocessor(options: DeckPreprocessorOptions = {}): Preproc
         const slideAttrs = buildSlideAttrs(slideClass);
         const bgDiv = buildBgDiv(images);
         const notesTag = notesContent
-          ? `\n    <Notes>${notesContent}</Notes>`
+          ? `\n    <div class="notes">${notesContent}</div>`
           : "";
 
         slideOutputs.push(
-          `  <Slide${slideAttrs}>\n    ${bgDiv}${innerHtml}${notesTag}\n  </Slide>`,
+          `  <section${slideAttrs}>\n    ${bgDiv}${innerHtml}${notesTag}\n  </section>`,
         );
       }
 
       const scriptBlock = buildScriptBlock(scripts, imageImportMap, bgHtmlDecls);
-      const presentationContent = slideOutputs.join("\n\n");
+      const slidesContent = slideOutputs.join("\n\n");
       const styleBlock = styles.length > 0 ? "\n" + styles.join("\n") : "";
 
-      const code = `${scriptBlock}\n\n<Presentation options={{ width: 1280, height: 720, margin: 0, hash: true, hashOneBasedIndex: true, controls: false, navigationMode: "linear", transition: "none", disableLayout: false, viewDistance: 10 }}>\n${presentationContent}\n</Presentation>${styleBlock}\n`;
+      const code = `${scriptBlock}\n\n<div class="reveal" bind:this={revealEl}>\n  <div class="slides">\n${slidesContent}\n  </div>\n</div>${styleBlock}\n`;
 
       return { code };
     },

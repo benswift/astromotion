@@ -7,7 +7,7 @@
 
   const { deckPath }: Props = $props();
 
-  const modules = import.meta.glob<{ default: Component }>("/src/decks/**/*.deck.svx");
+  const modules = import.meta.glob<{ default: Component }>("/src/decks/**/*.deck.svelte");
 
   let Deck: Component | undefined = $state();
 
