@@ -1,26 +1,26 @@
 # astromotion
 
-An unholy mixture of [Astro](https://astro.build), [Svelte](https://svelte.dev),
-[Animotion](https://animotion.pages.dev) (and therefore
-[Reveal.js](https://revealjs.com)), with a bit of [Marp](https://marp.app)
-syntax mixed in --- for markdown-authored slide decks in Astro sites.
+Astro integration for markdown-authored slide decks powered by
+[Reveal.js](https://revealjs.com), with a bit of [Marp](https://marp.app)
+syntax mixed in.
 
 This is shared in the spirit of openness and bonhomie, but it's really quite
 idiosyncratic, and I don't expect anyone apart from
 [me](https://github.com/benswift/) is going to find it useful.
 
+### About the name
+
+The name is a portmanteau of Astro + [Animotion](https://animotion.pages.dev).
+Animotion (a Svelte wrapper around Reveal.js) was the original runtime, but it
+was removed in favour of using Reveal.js directly --- the Svelte runtime and
+SvelteKit shims weren't worth the cost when 98% of decks are pure markdown. The
+name stuck because renaming a package used across seven projects isn't worth the
+churn.
+
 ## Install
 
 ```sh
 npm install github:benswift/astromotion
-```
-
-### Peer dependencies
-
-You also need these in your project:
-
-```sh
-npm install astro @astrojs/svelte svelte @animotion/core
 ```
 
 ## Setup
@@ -29,47 +29,63 @@ In your `astro.config.mjs`:
 
 ```js
 import { defineConfig } from "astro/config";
-import svelte from "@astrojs/svelte";
-import { astromotion, deckPreprocessor } from "astromotion";
+import { astromotion } from "astromotion";
 
 export default defineConfig({
-  integrations: [svelte({ preprocess: [deckPreprocessor()] }), astromotion()],
+  integrations: [astromotion()],
 });
 ```
 
 The integration handles:
 
+- registering a Vite plugin that transforms `.deck.md` files into HTML slides
 - injecting the `/decks/[...slug]` route
-- aliasing `$app/environment` for Animotion's SvelteKit shim
 - resolving the presentation theme CSS
+- initialising Reveal.js on the client
+
+### Optional: Svelte for interactive decks
+
+If you have decks that need Svelte interactivity, use `.deck.svelte` files
+instead of `.deck.md`. You'll also need `@astrojs/svelte` and `svelte`:
+
+```js
+import svelte from "@astrojs/svelte";
+import { astromotion, deckPreprocessor } from "astromotion";
+
+export default defineConfig({
+  integrations: [
+    svelte({ preprocess: [deckPreprocessor()] }),
+    astromotion(),
+  ],
+});
+```
 
 ## Writing slides
 
-Create `.deck.svx` files in `src/decks/`:
+Create `.deck.md` files in `src/decks/`:
 
 ```
 src/decks/
-  my-talk.deck.svx            -> /decks/my-talk/
+  my-talk.deck.md             -> /decks/my-talk/
   assets/
     photo.jpg
 ```
 
 Top-level files use the filename stem as the slug. Subdirectories also work ---
-a file named `slides.deck.svx` maps to the folder root URL, and other names
+a file named `slides.deck.md` maps to the folder root URL, and other names
 become sub-paths:
 
 ```
 src/decks/
   my-series/
-    slides.deck.svx           -> /decks/my-series/
-    bonus.deck.svx            -> /decks/my-series/bonus/
+    slides.deck.md            -> /decks/my-series/
+    bonus.deck.md             -> /decks/my-series/bonus/
 ```
 
 ### Slide syntax
 
-Slides are markdown separated by `---` (thematic breaks). The preprocessor
-converts them into Animotion `<Presentation>` and `<Slide>` components at build
-time.
+Slides are markdown separated by `---` (thematic breaks). The Vite plugin
+converts them into Reveal.js `<section>` elements at build time.
 
 ```markdown
 ---
@@ -112,8 +128,7 @@ Also Marp-inspired:
 - `![bg left:50%](url)` / `![bg right:40%](url)` --- split layout
 - `![bg blur:5px brightness:0.7](url)` --- CSS filters
 
-Relative paths (`./`, `../`) are resolved as Vite imports. Absolute paths
-(`/images/...`) reference `public/`.
+Absolute paths (`/images/...`) reference `public/`.
 
 ### QR codes
 
@@ -132,91 +147,37 @@ Generates an animated SVG QR code linking to the URL.
 
 ### Code blocks
 
-Fenced code blocks are rendered using Animotion's `<Code>` component with syntax
-highlighting.
-
-### Animotion components
-
-Sections containing `<Action>`, `<Code>`, `<Transition>`, or other Animotion
-components skip markdown processing and pass through as raw Svelte. You can mix
-markdown and interactive components freely.
+Fenced code blocks get syntax highlighting at build time via
+[Shiki](https://shiki.style). The theme is configurable --- see Options below.
 
 ### Script and style blocks
 
-`<script>` and `<style>` blocks are preserved. Animotion component imports are
-auto-added if missing.
+`<script>` and `<style>` blocks in `.deck.md` files are ignored (they're plain
+markdown, not Svelte). For interactive content, use `.deck.svelte` files.
 
 ## Theming
 
-The default theme (`theme/default.css`) provides only the structural CSS needed
-for backgrounds, split layouts, QR codes, and logo slides to render correctly.
-All visual styling --- colours, typography, slide classes like `impact` and
-`banner` --- is your responsibility.
-
-### Creating a theme
-
-Create a CSS file in your project (e.g. `src/decks/theme.css`) and pass it to
-the integration:
+The default theme re-exports Reveal.js's built-in black theme. For custom
+styling, create a CSS file and pass it to the integration:
 
 ```js
 astromotion({ theme: "./src/decks/theme.css" });
 ```
 
-Your theme should start with these imports (the structural defaults layer
-underneath):
-
-```css
-@import "@animotion/core/theme";
-```
-
-Then add your own styles.
-
-### Sharing styles between your site and your decks
-
-If your Astro site and your slide decks share a visual identity (colours, brand
-tokens, widget styles), extract the common CSS custom properties into a shared
-file (e.g. `src/styles/common.css`) and `@import` it from both your site's
-global stylesheet and your deck theme. This keeps values in sync without hacks.
-
-Keep context-specific things separate --- the website and decks have
-fundamentally different rendering models (responsive layout vs a fixed
-1280×720 viewport scaled to fill the screen), so root font size, layout tokens,
-and Reveal.js `--r-*` variables should stay in their respective files.
-
-At a minimum you'll want to set:
+Your theme CSS sets Reveal.js CSS variables and slide class styles. At a minimum:
 
 - **Reveal.js CSS variables** --- `--r-background-color`, `--r-main-color`,
   `--r-main-font`, `--r-main-font-size`, `--r-heading-color`, `--r-heading-font`,
   `--r-link-color`
 - **Slide section base styles** --- padding, text-align, font-weight under
   `.reveal .slides section`
-- **Typography** --- heading sizes, paragraph/list sizes, link styles, code blocks
 - **Slide classes** --- visual treatments for `banner`, `impact`, `quote`,
-  `centered`, and `columns` (these are the classes available via
-  `<!-- _class: ... -->` directives)
-
-### Font loading
-
-The theme CSS should only _reference_ fonts (via `font-family`), not _load_
-them. Use Astro's built-in font system in your `astro.config.mjs` to handle
-font loading:
-
-```js
-export default defineConfig({
-  fonts: [
-    {
-      name: "Your Font",
-      cssVariable: "--font-your-font",
-      provider: fontProviders.google(),
-    },
-  ],
-});
-```
+  `centered` (the classes available via `<!-- _class: ... -->` directives)
 
 ### Structural classes reference
 
-These classes are generated by the preprocessor and styled by the default theme.
-Your custom theme layers on top of them:
+These classes are generated by the preprocessor and styled by the base theme.
+Your custom theme layers on top:
 
 | Class | Purpose |
 |---|---|
@@ -226,14 +187,26 @@ Your custom theme layers on top of them:
 | `.split-content` | Content panel in split layout |
 | `.logo-svg` | SVG container for logo slides |
 | `.qr-code` | Container for generated QR code SVGs |
-| `.columns` | Two-column grid layout within slide content |
 
 ## Options
 
 ```ts
 astromotion({
-  theme: "./src/my-theme.css", // custom theme CSS path (default: built-in)
-  injectRoutes: true, // inject /decks/[...slug] route (default: true)
+  theme: "./src/my-theme.css",   // custom theme CSS path (default: built-in)
+  injectRoutes: true,            // inject /decks/[...slug] route (default: true)
+  codeTheme: "vitesse-dark",     // Shiki theme name or object (default: "vitesse-dark")
+});
+```
+
+The `codeTheme` option accepts a Shiki theme name (string) or an object passed
+directly to `@shikijs/rehype` --- for example, dual light/dark themes:
+
+```js
+astromotion({
+  codeTheme: {
+    themes: { light: anuLight, dark: anuDark },
+    defaultColor: false,
+  },
 });
 ```
 
@@ -258,7 +231,7 @@ const decks = [];
 for (const entry of fs.readdirSync(decksDir, { withFileTypes: true })) {
   if (entry.isDirectory()) {
     for (const file of fs.readdirSync(path.join(decksDir, entry.name))) {
-      const match = file.match(/^(.+)\.deck\.svx$/);
+      const match = file.match(/^(.+)\.deck\.md$/);
       if (!match) continue;
       const raw = fs.readFileSync(path.join(decksDir, entry.name, file), "utf-8");
       const { data } = parseDeckFrontmatter(raw, entry.name);
@@ -266,7 +239,7 @@ for (const entry of fs.readdirSync(decksDir, { withFileTypes: true })) {
       decks.push({ slug, title: data.title ?? slug, description: data.description });
     }
   } else if (entry.isFile()) {
-    const match = entry.name.match(/^(.+)\.deck\.svx$/);
+    const match = entry.name.match(/^(.+)\.deck\.md$/);
     if (!match) continue;
     const raw = fs.readFileSync(path.join(decksDir, entry.name), "utf-8");
     const { data } = parseDeckFrontmatter(raw, match[1]);
