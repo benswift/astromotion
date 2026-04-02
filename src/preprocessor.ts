@@ -18,7 +18,7 @@ const INCLUDE_RE = /^<!--\s*@include\s+(\S+)\s*-->$/;
 const LOGO_CLASS_RE = /^(anu-logo|socy-logo)$/;
 const QR_IMAGE_RE = /!\[qr\]\(([^)]+)\)/g;
 
-const REVEAL_OPTIONS = `{ width: 1280, height: 720, margin: 0, hash: true, hashOneBasedIndex: true, controls: false, navigationMode: "linear", transition: "none", disableLayout: false, viewDistance: 10 }`;
+const REVEAL_OPTIONS = `{ width: 1280, height: 720, margin: 0, hash: true, hashOneBasedIndex: true, controls: false, navigationMode: "linear", transition: "none", disableLayout: true, display: "grid", center: true, viewDistance: 10 }`;
 
 interface BgImage {
   url: string;

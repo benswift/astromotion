@@ -92,7 +92,9 @@ const { title, description, image, deckPath, isSvelte, slidesHtml } = Astro.prop
       controls: false,
       navigationMode: "linear",
       transition: "none",
-      disableLayout: false,
+      disableLayout: true,
+      display: "grid",
+      center: true,
       viewDistance: 10,
     });
     deck.initialize();
