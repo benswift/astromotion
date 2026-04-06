@@ -326,6 +326,7 @@ function replaceRelativeImgSrcs(
 
 interface DeckPluginOptions {
   codeTheme?: string | Record<string, unknown>;
+  preprocess?: (markdown: string, filePath: string) => string | Promise<string>;
 }
 
 export function deckPlugin(options: DeckPluginOptions = {}): Plugin {
@@ -347,7 +348,10 @@ export function deckPlugin(options: DeckPluginOptions = {}): Plugin {
         htmlProcessor = await createHtmlProcessor(codeTheme);
       }
 
-      const code = readFileSync(id, "utf-8");
+      let code = readFileSync(id, "utf-8");
+      if (options.preprocess) {
+        code = await options.preprocess(code, id);
+      }
       const { data: frontmatter } = parseDeckFrontmatter(code);
       const root = parseProcessor.parse(code);
       resolveIncludes(root, dirname(id));
@@ -463,6 +467,9 @@ export async function processDeckMarkdown(
   const codeTheme = options.codeTheme ?? "vitesse-dark";
   const htmlProcessor = await createHtmlProcessor(codeTheme);
 
+  if (options.preprocess) {
+    code = await options.preprocess(code, filePath);
+  }
   const root = parseProcessor.parse(code);
   resolveIncludes(root, dirname(filePath));
   const { content: contentNodes } = separateAstNodes(root);

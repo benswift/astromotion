@@ -1,12 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { resolve } from "node:path";
-import { deckPlugin } from "../src/vite-plugin.ts";
+import { deckPlugin, processDeckMarkdown } from "../src/vite-plugin.ts";
 
 const FIXTURES = resolve(import.meta.dirname, "fixtures");
 
-async function process(name: string): Promise<string> {
+async function process(name: string, options?: Parameters<typeof deckPlugin>[0]): Promise<string> {
   const id = resolve(FIXTURES, name);
-  const plugin = deckPlugin();
+  const plugin = deckPlugin(options);
   const load = (plugin as any).load.bind(plugin);
   const result = await load(id);
   if (!result) throw new Error(`Plugin returned null for ${name}`);
@@ -168,6 +168,56 @@ describe("deckPlugin", () => {
     it("runs the smartypants pipeline", async () => {
       const code = await process("basic.deck.md");
       expect(code).toBeDefined();
+    });
+  });
+
+  describe("preprocess hook", () => {
+    it("transforms markdown before slide processing", async () => {
+      const code = await process("basic.deck.md", {
+        preprocess: (md) => md.replace("Slide one", "Replaced title"),
+      });
+      expect(code).toContain("Replaced title");
+      expect(code).not.toContain("Slide one");
+    });
+
+    it("receives the file path", async () => {
+      let receivedPath = "";
+      await process("basic.deck.md", {
+        preprocess: (md, filePath) => {
+          receivedPath = filePath;
+          return md;
+        },
+      });
+      expect(receivedPath).toContain("basic.deck.md");
+    });
+
+    it("supports async preprocess functions", async () => {
+      const code = await process("basic.deck.md", {
+        preprocess: async (md) => {
+          await new Promise((resolve) => setTimeout(resolve, 1));
+          return md.replace("Slide two", "Async replaced");
+        },
+      });
+      expect(code).toContain("Async replaced");
+    });
+
+    it("does not interfere when preprocess is not set", async () => {
+      const withoutPreprocess = await process("basic.deck.md");
+      const withNoop = await process("basic.deck.md", {
+        preprocess: (md) => md,
+      });
+      expect(withoutPreprocess).toBe(withNoop);
+    });
+  });
+
+  describe("processDeckMarkdown with preprocess", () => {
+    it("applies preprocess before rendering slides", async () => {
+      const source = "---\ntitle: Test\n---\n\n# Original\n\n---\n\n## Second\n";
+      const html = await processDeckMarkdown(source, "/fake/test.deck.md", {
+        preprocess: (md) => md.replace("Original", "Preprocessed"),
+      });
+      expect(html).toContain("Preprocessed");
+      expect(html).not.toContain("Original");
     });
   });
 });

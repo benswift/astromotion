@@ -279,6 +279,7 @@ astromotion({
   theme: "./src/my-theme.css",   // custom theme CSS path (default: built-in black theme)
   injectRoutes: true,            // inject /decks/[...slug] route (default: true)
   codeTheme: "vitesse-dark",     // Shiki theme name or object (default: "vitesse-dark")
+  preprocess: (md, filePath) => md,  // transform markdown before slide processing (optional)
 });
 ```
 
@@ -293,6 +294,10 @@ astromotion({
   },
 });
 ```
+
+The `preprocess` option accepts a function `(markdown: string, filePath: string) => string | Promise<string>` that transforms the raw deck markdown before any slide processing. The function receives the file content and its absolute path, and should return the transformed markdown. This runs before frontmatter parsing, include resolution, and slide splitting --- so your preprocessor sees the original source and can make arbitrary changes.
+
+Use cases include resolving custom directives, injecting content from external sources, or expanding shorthand syntax. The preprocessor is intentionally generic --- astromotion doesn't prescribe what transformations you apply.
 
 If you set `injectRoutes: false`, you'll need to create your own route pages.
 See `pages/[...slug].astro` in this package for the reference implementation.

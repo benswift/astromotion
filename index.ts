@@ -10,6 +10,7 @@ export interface AstromotionOptions {
   theme?: string;
   injectRoutes?: boolean;
   codeTheme?: string | Record<string, unknown>;
+  preprocess?: (markdown: string, filePath: string) => string | Promise<string>;
 }
 
 export function astromotion(options: AstromotionOptions = {}): AstroIntegration {
@@ -33,7 +34,7 @@ export function astromotion(options: AstromotionOptions = {}): AstroIntegration 
               },
             },
             plugins: [
-              deckPlugin({ codeTheme: options.codeTheme }),
+              deckPlugin({ codeTheme: options.codeTheme, preprocess: options.preprocess }),
               {
                 name: "astromotion-config",
                 resolveId(id) {
