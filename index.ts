@@ -2,7 +2,7 @@ import type { AstroIntegration } from "astro";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
-import { deckPlugin } from "./src/vite-plugin.ts";
+import { deckPlugin, setGlobalPreprocess } from "./src/vite-plugin.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -18,6 +18,10 @@ export function astromotion(options: AstromotionOptions = {}): AstroIntegration 
   const themePath = options.theme
     ? resolve(options.theme)
     : resolve(__dirname, "theme/default.css");
+
+  if (options.preprocess) {
+    setGlobalPreprocess(options.preprocess);
+  }
 
   return {
     name: "astromotion",

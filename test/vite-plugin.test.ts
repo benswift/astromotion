@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import { resolve } from "node:path";
-import { deckPlugin, processDeckMarkdown } from "../src/vite-plugin.ts";
+import { deckPlugin, processDeckMarkdown, setGlobalPreprocess } from "../src/vite-plugin.ts";
 
 const FIXTURES = resolve(import.meta.dirname, "fixtures");
 
@@ -218,6 +218,25 @@ describe("deckPlugin", () => {
       });
       expect(html).toContain("Preprocessed");
       expect(html).not.toContain("Original");
+    });
+
+    it("uses global preprocess when no option is passed", async () => {
+      setGlobalPreprocess((md) => md.replace("Original", "Global"));
+      const source = "---\ntitle: Test\n---\n\n# Original\n";
+      const html = await processDeckMarkdown(source, "/fake/test.deck.md");
+      expect(html).toContain("Global");
+      expect(html).not.toContain("Original");
+      setGlobalPreprocess(undefined as any);
+    });
+
+    it("option preprocess takes precedence over global", async () => {
+      setGlobalPreprocess((md) => md.replace("Original", "Global"));
+      const source = "---\ntitle: Test\n---\n\n# Original\n";
+      const html = await processDeckMarkdown(source, "/fake/test.deck.md", {
+        preprocess: (md) => md.replace("Original", "Local"),
+      });
+      expect(html).toContain("Local");
+      setGlobalPreprocess(undefined as any);
     });
   });
 });

@@ -14,6 +14,14 @@ import { generateQrCode } from "./svg/qr-code.js";
 import { smartypants } from "smartypants";
 import { parseDeckFrontmatter } from "./meta.js";
 
+type PreprocessFn = (markdown: string, filePath: string) => string | Promise<string>;
+
+let globalPreprocess: PreprocessFn | undefined;
+
+export function setGlobalPreprocess(fn: PreprocessFn): void {
+  globalPreprocess = fn;
+}
+
 const DECK_FILE_PATTERN = /\.deck\.md$/;
 const INCLUDE_RE = /^<!--\s*@include\s+(\S+)\s*-->$/;
 const LOGO_CLASS_RE = /^(anu-logo|socy-logo)$/;
@@ -467,8 +475,9 @@ export async function processDeckMarkdown(
   const codeTheme = options.codeTheme ?? "vitesse-dark";
   const htmlProcessor = await createHtmlProcessor(codeTheme);
 
-  if (options.preprocess) {
-    code = await options.preprocess(code, filePath);
+  const preprocess = options.preprocess ?? globalPreprocess;
+  if (preprocess) {
+    code = await preprocess(code, filePath);
   }
   const root = parseProcessor.parse(code);
   resolveIncludes(root, dirname(filePath));
