@@ -5,7 +5,7 @@ Reveal.js. Consumed as a package by Astro sites --- not a standalone app.
 
 ## Commands
 
-- `pnpm test` --- vitest (92 tests across 6 files)
+- `pnpm test` --- vitest
 
 ## Architecture
 
@@ -38,10 +38,9 @@ content.
 
 ### Shared markdown pipeline
 
-Both paths share: remark-parse + remark-gfm + remark-frontmatter for parsing,
-rehype-shiki for code highlighting, rehype-stringify for HTML output, plus
-custom transforms for includes, bg images, QR codes, logo slides, metadata
-directives, and smartypants.
+Both paths share a unified remark/rehype pipeline plus custom transforms for
+includes, bg images, QR codes, logo slides, metadata directives, and
+smartypants.
 
 ## Key design decisions
 
@@ -61,17 +60,10 @@ structural CSS (backgrounds, splits, QR codes) and an `@layer astromotion`
 block that maps `--r-*` CSS variables to `.reveal` and `.reveal .slides section`
 properties (fonts, colours, heading sizes, links, code, Shiki highlighting).
 
-The `@layer` ensures these defaults survive CSS bundling (lightningcss drops
-unlayered rules when a consuming theme targets the same selectors) while letting
-consuming themes override them without specificity concerns --- unlayered CSS
-always beats layered CSS.
-
 Consuming themes only need to set `--r-*` variables in `:root`; the layer
 handles mapping them to elements. For ANU-specific overrides (e.g. gold
 background on h1), the consuming theme adds unlayered rules which automatically
 win.
 
 The consuming project provides visual theme CSS via the integration's `theme`
-option; `theme/default.css` re-exports Reveal.js's built-in black theme as a
-fallback. `DeckLayout.astro` imports `reveal.js/dist/reveal.css` for core
-Reveal.js styles.
+option.
