@@ -35,7 +35,7 @@ interface BgImage {
 
 const parseProcessor = unified().use(remarkParse).use(remarkGfm).use(remarkFrontmatter);
 
-function separateAstNodes(root: Root) {
+function separateAstNodes(root: Root, { extractStyles = true } = {}) {
   const styles: string[] = [];
   const content: RootContent[] = [];
 
@@ -44,7 +44,7 @@ function separateAstNodes(root: Root) {
     if (node.type === "html") {
       const val = (node as any).value;
       if (/^<script[\s>]/i.test(val)) continue;
-      if (/^<style[\s>]/i.test(val)) {
+      if (extractStyles && /^<style[\s>]/i.test(val)) {
         styles.push(val);
         continue;
       }
@@ -355,7 +355,7 @@ export function deckPlugin(options: DeckPluginOptions = {}): Plugin {
       const { data: frontmatter } = parseDeckFrontmatter(code);
       code = resolveIncludesText(code, dirname(id));
       const root = parseProcessor.parse(code);
-      const { styles, content: contentNodes } = separateAstNodes(root);
+      const { content: contentNodes } = separateAstNodes(root, { extractStyles: false });
 
       if (contentNodes.length === 0) return null;
 
@@ -415,14 +415,10 @@ export function deckPlugin(options: DeckPluginOptions = {}): Plugin {
       }
 
       const slidesExpr = slideExprs.join(" + ");
-      const styleExport = styles.length > 0
-        ? `export const styles = ${JSON.stringify(styles.join("\n"))};`
-        : "";
 
       const output = [
         ...importLines,
         `export const frontmatter = ${JSON.stringify(frontmatter)};`,
-        styleExport,
         `const slides = ${slidesExpr};`,
         "export default slides;",
       ].filter(Boolean).join("\n");
@@ -461,7 +457,7 @@ export async function processDeckMarkdown(
   }
   code = resolveIncludesText(code, dirname(filePath));
   const root = parseProcessor.parse(code);
-  const { content: contentNodes } = separateAstNodes(root);
+  const { content: contentNodes } = separateAstNodes(root, { extractStyles: false });
 
   if (contentNodes.length === 0) return "";
 

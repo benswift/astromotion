@@ -271,11 +271,18 @@ describe("processDeckMarkdown HTML output", () => {
       expect(sections(doc).length).toBeGreaterThanOrEqual(2);
     });
 
-    it("ignores script and style blocks in HTML output", async () => {
+    it("strips script blocks from HTML output", async () => {
       const doc = await processFixture("with-script.deck.md");
       const html = doc.getElementById("slides")!.innerHTML;
       expect(html).not.toContain("<script");
       expect(html).not.toContain("const name");
+    });
+
+    it("keeps style blocks inline in HTML output", async () => {
+      const doc = await processFixture("with-script.deck.md");
+      const html = doc.getElementById("slides")!.innerHTML;
+      expect(html).toContain("<style");
+      expect(html).toContain("color: red");
     });
   });
 });
