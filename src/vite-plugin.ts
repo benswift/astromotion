@@ -1,5 +1,5 @@
 import type { Plugin } from "vite";
-import type { Root, RootContent } from "mdast";
+import type { Root, RootContent, Html } from "mdast";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { unified } from "unified";
@@ -12,6 +12,14 @@ import rehypeStringify from "rehype-stringify";
 import { generateQrCode } from "./svg/qr-code.js";
 import { smartypants } from "smartypants";
 import { parseDeckFrontmatter } from "./meta.js";
+import {
+  parseClassDirective,
+  parseNotesDirective,
+  parseIncludeDirective,
+  isHtmlTagStart,
+  parseBgModifiers,
+  findRelativeImgSrcs,
+} from "./parse-helpers.js";
 
 type PreprocessFn = (markdown: string, filePath: string) => string | Promise<string>;
 
@@ -22,7 +30,6 @@ export function setGlobalPreprocess(fn: PreprocessFn): void {
 }
 
 const DECK_FILE_PATTERN = /\.deck\.md$/;
-const INCLUDE_RE = /^<!--\s*@include\s+(\S+)\s*-->$/gm;
 
 interface BgImage {
   url: string;
@@ -42,9 +49,9 @@ function separateAstNodes(root: Root, { extractStyles = true } = {}) {
   for (const node of root.children) {
     if (node.type === "yaml") continue;
     if (node.type === "html") {
-      const val = (node as any).value;
-      if (/^<script[\s>]/i.test(val)) continue;
-      if (extractStyles && /^<style[\s>]/i.test(val)) {
+      const val = (node as Html).value;
+      if (isHtmlTagStart(val, "script")) continue;
+      if (extractStyles && isHtmlTagStart(val, "style")) {
         styles.push(val);
         continue;
       }
@@ -55,47 +62,21 @@ function separateAstNodes(root: Root, { extractStyles = true } = {}) {
   return { styles, content };
 }
 
-function parseBgModifiers(modifiers: string): Omit<BgImage, "url"> {
-  const trimmed = modifiers.trim();
-  const result: Omit<BgImage, "url"> = {};
+function resolveIncludes(root: Root, dir: string, depth = 0): void {
+  if (depth > 10) return;
 
-  const leftMatch = trimmed.match(/\bleft(?::(\d+%))?/);
-  if (leftMatch) {
-    result.position = "left";
-    result.splitPercent = leftMatch[1] || "50%";
-  }
+  for (let i = root.children.length - 1; i >= 0; i--) {
+    const node = root.children[i];
+    if (node.type !== "html") continue;
+    const path = parseIncludeDirective((node as Html).value);
+    if (!path) continue;
 
-  const rightMatch = trimmed.match(/\bright(?::(\d+%))?/);
-  if (rightMatch) {
-    result.position = "right";
-    result.splitPercent = rightMatch[1] || "50%";
-  }
-
-  if (/\bcontain\b/.test(trimmed)) {
-    result.size = "contain";
-  } else if (/\bcover\b/.test(trimmed)) {
-    result.size = "cover";
-  }
-
-  const filterParts: string[] = [];
-  const blurMatch = trimmed.match(/blur:(\S+)/);
-  if (blurMatch) filterParts.push(`blur(${blurMatch[1]})`);
-  const brightnessMatch = trimmed.match(/brightness:(\S+)/);
-  if (brightnessMatch) filterParts.push(`brightness(${brightnessMatch[1]})`);
-  const saturateMatch = trimmed.match(/saturate:(\S+)/);
-  if (saturateMatch) filterParts.push(`saturate(${saturateMatch[1]})`);
-  if (filterParts.length > 0) result.filters = filterParts.join(" ");
-
-  return result;
-}
-
-function resolveIncludesText(markdown: string, dir: string, depth = 0): string {
-  if (depth > 10) return markdown;
-  return markdown.replace(INCLUDE_RE, (_match, filePath) => {
-    const includePath = resolve(dir, filePath);
+    const includePath = resolve(dir, path);
     const content = readFileSync(includePath, "utf-8");
-    return resolveIncludesText(content, dirname(includePath), depth + 1);
-  });
+    const includeRoot = parseProcessor.parse(content);
+    resolveIncludes(includeRoot, dirname(includePath), depth + 1);
+    root.children.splice(i, 1, ...includeRoot.children);
+  }
 }
 
 function splitAtThematicBreaks(nodes: RootContent[]): RootContent[][] {
@@ -122,14 +103,14 @@ function extractMetadataNodes(nodes: RootContent[]) {
 
   for (const node of nodes) {
     if (node.type === "html") {
-      const classMatch = (node as any).value.match(/<!--\s*_class:\s*([\w\s-]+?)\s*-->/);
-      if (classMatch) {
-        slideClass = classMatch[1].trim();
+      const cls = parseClassDirective((node as Html).value);
+      if (cls !== null) {
+        slideClass = cls;
         continue;
       }
-      const notesMatch = (node as any).value.match(/<!--\s*notes:\s*([\s\S]*?)\s*-->/);
-      if (notesMatch) {
-        notesContent = notesMatch[1].trim();
+      const notes = parseNotesDirective((node as Html).value);
+      if (notes !== null) {
+        notesContent = notes;
         continue;
       }
     }
@@ -177,7 +158,7 @@ async function astToHtml(nodes: RootContent[], processor: any): Promise<string> 
 }
 
 function isRelativeUrl(url: string): boolean {
-  return !url.startsWith("/") && !/^https?:\/\//.test(url);
+  return url.startsWith("./") || url.startsWith("../");
 }
 
 function imgSrcExpr(varName: string): string {
@@ -295,33 +276,35 @@ function replaceRelativeImgSrcs(
   imageImportMap: Map<string, string>,
   imgCounter: { value: number },
 ): { segments: Segment[] } {
+  const imgTags = findRelativeImgSrcs(html);
+  if (imgTags.length === 0) {
+    return { segments: [{ type: "static", value: html }] };
+  }
+
   const segments: Segment[] = [];
-  const imgRe = /<img\b([^>]*?)\bsrc=["'](\.\.?\/[^"']+)["']([^>]*?)>/g;
   let lastIndex = 0;
-  let match;
 
-  while ((match = imgRe.exec(html)) !== null) {
-    if (match.index > lastIndex) {
-      segments.push({ type: "static", value: html.slice(lastIndex, match.index) });
+  for (const tag of imgTags) {
+    if (tag.start > lastIndex) {
+      segments.push({ type: "static", value: html.slice(lastIndex, tag.start) });
     }
 
-    const [, before, url, after] = match;
-    if (!imageImportMap.has(url)) {
-      imageImportMap.set(url, `__deckImg${imgCounter.value++}`);
+    if (!imageImportMap.has(tag.src)) {
+      imageImportMap.set(tag.src, `__deckImg${imgCounter.value++}`);
     }
-    const varName = imageImportMap.get(url)!;
-    segments.push({ type: "static", value: `<img${before}src="` });
+    const varName = imageImportMap.get(tag.src)!;
+    segments.push({ type: "static", value: `<img${tag.before}src="` });
     segments.push({ type: "expr", value: imgSrcExpr(varName) });
-    segments.push({ type: "static", value: `"${after}>` });
+    segments.push({ type: "static", value: `"${tag.after}>` });
 
-    lastIndex = match.index + match[0].length;
+    lastIndex = tag.end;
   }
 
   if (lastIndex < html.length) {
     segments.push({ type: "static", value: html.slice(lastIndex) });
   }
 
-  return { segments: segments.length > 0 ? segments : [{ type: "static", value: html }] };
+  return { segments };
 }
 
 interface DeckPluginOptions {
@@ -353,8 +336,8 @@ export function deckPlugin(options: DeckPluginOptions = {}): Plugin {
         code = await options.preprocess(code, id);
       }
       const { data: frontmatter } = parseDeckFrontmatter(code);
-      code = resolveIncludesText(code, dirname(id));
       const root = parseProcessor.parse(code);
+      resolveIncludes(root, dirname(id));
       const { content: contentNodes } = separateAstNodes(root, { extractStyles: false });
 
       if (contentNodes.length === 0) return null;
@@ -455,8 +438,8 @@ export async function processDeckMarkdown(
   if (preprocess) {
     code = await preprocess(code, filePath);
   }
-  code = resolveIncludesText(code, dirname(filePath));
   const root = parseProcessor.parse(code);
+  resolveIncludes(root, dirname(filePath));
   const { content: contentNodes } = separateAstNodes(root, { extractStyles: false });
 
   if (contentNodes.length === 0) return "";

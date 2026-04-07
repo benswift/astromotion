@@ -11,10 +11,17 @@ import rehypeShiki from "@shikijs/rehype";
 import rehypeStringify from "rehype-stringify";
 import { generateQrCode } from "./svg/qr-code.js";
 import { smartypants } from "smartypants";
+import {
+  parseClassDirective,
+  parseNotesDirective,
+  parseIncludeDirective,
+  isHtmlTagStart,
+  parseBgModifiers,
+  extractScriptContent,
+  findRelativeImgSrcs,
+} from "./parse-helpers.js";
 
 const DECK_FILE_PATTERN = /\.deck\.svelte$/;
-const INCLUDE_RE = /^<!--\s*@include\s+(\S+)\s*-->$/gm;
-const QR_IMAGE_RE = /!\[qr\]\(([^)]+)\)/g;
 
 const REVEAL_OPTIONS = `{ width: 1280, height: 720, margin: 0, hash: true, hashOneBasedIndex: true, controls: false, navigationMode: "linear", transition: "none", disableLayout: true, display: "grid", center: true, viewDistance: 10 }`;
 
@@ -50,11 +57,11 @@ function separateAstNodes(root: Root): {
     if (node.type === "yaml") continue;
     if (node.type === "html") {
       const val = (node as Html).value;
-      if (/^<script[\s>]/i.test(val)) {
+      if (isHtmlTagStart(val, "script")) {
         scripts.push(val);
         continue;
       }
-      if (/^<style[\s>]/i.test(val)) {
+      if (isHtmlTagStart(val, "style")) {
         styles.push(val);
         continue;
       }
@@ -65,47 +72,21 @@ function separateAstNodes(root: Root): {
   return { scripts, styles, content };
 }
 
-function parseBgModifiers(modifiers: string): Omit<BgImage, "url"> {
-  const trimmed = modifiers.trim();
-  const result: Omit<BgImage, "url"> = {};
+function resolveIncludes(root: Root, dir: string, depth = 0): void {
+  if (depth > 10) return;
 
-  const leftMatch = trimmed.match(/\bleft(?::(\d+%))?/);
-  if (leftMatch) {
-    result.position = "left";
-    result.splitPercent = leftMatch[1] || "50%";
-  }
+  for (let i = root.children.length - 1; i >= 0; i--) {
+    const node = root.children[i];
+    if (node.type !== "html") continue;
+    const path = parseIncludeDirective((node as Html).value);
+    if (!path) continue;
 
-  const rightMatch = trimmed.match(/\bright(?::(\d+%))?/);
-  if (rightMatch) {
-    result.position = "right";
-    result.splitPercent = rightMatch[1] || "50%";
-  }
-
-  if (/\bcontain\b/.test(trimmed)) {
-    result.size = "contain";
-  } else if (/\bcover\b/.test(trimmed)) {
-    result.size = "cover";
-  }
-
-  const filterParts: string[] = [];
-  const blurMatch = trimmed.match(/blur:(\S+)/);
-  if (blurMatch) filterParts.push(`blur(${blurMatch[1]})`);
-  const brightnessMatch = trimmed.match(/brightness:(\S+)/);
-  if (brightnessMatch) filterParts.push(`brightness(${brightnessMatch[1]})`);
-  const saturateMatch = trimmed.match(/saturate:(\S+)/);
-  if (saturateMatch) filterParts.push(`saturate(${saturateMatch[1]})`);
-  if (filterParts.length > 0) result.filters = filterParts.join(" ");
-
-  return result;
-}
-
-function resolveIncludesText(markdown: string, dir: string, depth = 0): string {
-  if (depth > 10) return markdown;
-  return markdown.replace(INCLUDE_RE, (_match, filePath) => {
-    const includePath = resolve(dir, filePath);
+    const includePath = resolve(dir, path);
     const content = readFileSync(includePath, "utf-8");
-    return resolveIncludesText(content, dirname(includePath), depth + 1);
-  });
+    const includeRoot = parseProcessor.parse(content);
+    resolveIncludes(includeRoot, dirname(includePath), depth + 1);
+    root.children.splice(i, 1, ...includeRoot.children);
+  }
 }
 
 function splitAtThematicBreaks(nodes: RootContent[]): RootContent[][] {
@@ -136,14 +117,14 @@ function extractMetadataNodes(nodes: RootContent[]): {
 
   for (const node of nodes) {
     if (node.type === "html") {
-      const classMatch = (node as Html).value.match(/<!--\s*_class:\s*([\w\s-]+?)\s*-->/);
-      if (classMatch) {
-        slideClass = classMatch[1].trim();
+      const cls = parseClassDirective((node as Html).value);
+      if (cls !== null) {
+        slideClass = cls;
         continue;
       }
-      const notesMatch = (node as Html).value.match(/<!--\s*notes:\s*([\s\S]*?)\s*-->/);
-      if (notesMatch) {
-        notesContent = notesMatch[1].trim();
+      const notes = parseNotesDirective((node as Html).value);
+      if (notes !== null) {
+        notesContent = notes;
         continue;
       }
     }
@@ -259,10 +240,11 @@ function buildScriptBlock(
 
   if (userScripts.length > 0) {
     const raw = userScripts.join("\n");
-    const tagMatch = raw.match(/^<script([^>]*)>/i);
-    if (tagMatch) scriptAttrs = tagMatch[1];
-    const bodyMatch = raw.match(/^<script[^>]*>([\s\S]*)<\/script>\s*$/i);
-    if (bodyMatch) userBody = bodyMatch[1];
+    const parsed = extractScriptContent(raw);
+    if (parsed) {
+      scriptAttrs = parsed.attrs;
+      userBody = parsed.body;
+    }
   }
 
   const lines: string[] = [];
@@ -314,8 +296,8 @@ export function deckPreprocessor(options: DeckPreprocessorOptions = {}): Preproc
         htmlProcessor = await createHtmlProcessor(codeTheme);
       }
 
-      const resolved = resolveIncludesText(content, dirname(filename));
-      const root = parseProcessor.parse(resolved);
+      const root = parseProcessor.parse(content);
+      resolveIncludes(root, dirname(filename));
       const { scripts, styles, content: contentNodes } = separateAstNodes(root);
 
       if (contentNodes.length === 0) {
@@ -337,7 +319,7 @@ export function deckPreprocessor(options: DeckPreprocessorOptions = {}): Preproc
         const { images, remaining: afterBg } = extractBgImagesFromAst(afterMeta);
 
         for (const img of images) {
-          if (!img.url.startsWith("/") && !/^https?:\/\//.test(img.url)) {
+          if (!img.url.startsWith("/") && !img.url.startsWith("http://") && !img.url.startsWith("https://")) {
             if (!imageImportMap.has(img.url)) {
               imageImportMap.set(img.url, `__deckImg${imgCounter++}`);
             }
@@ -365,17 +347,23 @@ export function deckPreprocessor(options: DeckPreprocessorOptions = {}): Preproc
         const afterQr = replaceQrImagesInAst(afterBg);
         let innerHtml = await astToHtml(afterQr, htmlProcessor);
 
-        innerHtml = innerHtml.replace(
-          /<img\b([^>]*?)\bsrc=["'](\.\.?\/[^"']+)["']([^>]*?)>/g,
-          (_match, before, url, after) => {
-            if (!imageImportMap.has(url)) {
-              imageImportMap.set(url, `__deckImg${imgCounter++}`);
+        const imgTags = findRelativeImgSrcs(innerHtml);
+        if (imgTags.length > 0) {
+          let result = "";
+          let lastIndex = 0;
+          for (const tag of imgTags) {
+            result += innerHtml.slice(lastIndex, tag.start);
+            if (!imageImportMap.has(tag.src)) {
+              imageImportMap.set(tag.src, `__deckImg${imgCounter++}`);
             }
-            const varName = imageImportMap.get(url)!;
+            const varName = imageImportMap.get(tag.src)!;
             const srcExpr = `{typeof ${varName} === 'string' ? ${varName} : ${varName}.src}`;
-            return `<img${before}src=${srcExpr}${after}>`;
-          },
-        );
+            result += `<img${tag.before}src=${srcExpr}${tag.after}>`;
+            lastIndex = tag.end;
+          }
+          result += innerHtml.slice(lastIndex);
+          innerHtml = result;
+        }
 
         innerHtml = smartypants(innerHtml, "2");
         innerHtml = buildSplitWrapper(images, innerHtml);

@@ -67,7 +67,7 @@ describe("extractBgImagesFromAst", () => {
       makeImageParagraph("bg brightness:0.5 blur:2px", "photo.jpg"),
     ];
     const { images } = extractBgImagesFromAst(nodes);
-    expect(images[0].filters).toBe("blur(2px) brightness(0.5)");
+    expect(images[0].filters).toBe("brightness(0.5) blur(2px)");
   });
 
   it("does not extract non-bg images", () => {
