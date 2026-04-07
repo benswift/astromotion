@@ -13,7 +13,7 @@ import { generateQrCode } from "./svg/qr-code.js";
 import { smartypants } from "smartypants";
 
 const DECK_FILE_PATTERN = /\.deck\.svelte$/;
-const INCLUDE_RE = /^<!--\s*@include\s+(\S+)\s*-->$/;
+const INCLUDE_RE = /^<!--\s*@include\s+(\S+)\s*-->$/gm;
 const QR_IMAGE_RE = /!\[qr\]\(([^)]+)\)/g;
 
 const REVEAL_OPTIONS = `{ width: 1280, height: 720, margin: 0, hash: true, hashOneBasedIndex: true, controls: false, navigationMode: "linear", transition: "none", disableLayout: true, display: "grid", center: true, viewDistance: 10 }`;
@@ -99,19 +99,13 @@ function parseBgModifiers(modifiers: string): Omit<BgImage, "url"> {
   return result;
 }
 
-function resolveIncludes(root: Root, dir: string): void {
-  const children = root.children;
-  for (let i = 0; i < children.length; i++) {
-    const node = children[i];
-    if (node.type !== "html") continue;
-    const match = (node as Html).value.match(INCLUDE_RE);
-    if (!match) continue;
-    const includePath = resolve(dir, match[1]);
-    const includeContent = readFileSync(includePath, "utf-8");
-    const included = parseProcessor.parse(includeContent);
-    children.splice(i, 1, ...included.children);
-    i += included.children.length - 1;
-  }
+function resolveIncludesText(markdown: string, dir: string, depth = 0): string {
+  if (depth > 10) return markdown;
+  return markdown.replace(INCLUDE_RE, (_match, filePath) => {
+    const includePath = resolve(dir, filePath);
+    const content = readFileSync(includePath, "utf-8");
+    return resolveIncludesText(content, dirname(includePath), depth + 1);
+  });
 }
 
 function splitAtThematicBreaks(nodes: RootContent[]): RootContent[][] {
@@ -320,8 +314,8 @@ export function deckPreprocessor(options: DeckPreprocessorOptions = {}): Preproc
         htmlProcessor = await createHtmlProcessor(codeTheme);
       }
 
-      const root = parseProcessor.parse(content);
-      resolveIncludes(root, dirname(filename));
+      const resolved = resolveIncludesText(content, dirname(filename));
+      const root = parseProcessor.parse(resolved);
       const { scripts, styles, content: contentNodes } = separateAstNodes(root);
 
       if (contentNodes.length === 0) {

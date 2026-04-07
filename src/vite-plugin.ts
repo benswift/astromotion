@@ -22,7 +22,7 @@ export function setGlobalPreprocess(fn: PreprocessFn): void {
 }
 
 const DECK_FILE_PATTERN = /\.deck\.md$/;
-const INCLUDE_RE = /^<!--\s*@include\s+(\S+)\s*-->$/;
+const INCLUDE_RE = /^<!--\s*@include\s+(\S+)\s*-->$/gm;
 
 interface BgImage {
   url: string;
@@ -89,19 +89,13 @@ function parseBgModifiers(modifiers: string): Omit<BgImage, "url"> {
   return result;
 }
 
-function resolveIncludes(root: Root, dir: string): void {
-  const children = root.children;
-  for (let i = 0; i < children.length; i++) {
-    const node = children[i];
-    if (node.type !== "html") continue;
-    const match = (node as any).value.match(INCLUDE_RE);
-    if (!match) continue;
-    const includePath = resolve(dir, match[1]);
-    const includeContent = readFileSync(includePath, "utf-8");
-    const included = parseProcessor.parse(includeContent);
-    children.splice(i, 1, ...included.children);
-    i += included.children.length - 1;
-  }
+function resolveIncludesText(markdown: string, dir: string, depth = 0): string {
+  if (depth > 10) return markdown;
+  return markdown.replace(INCLUDE_RE, (_match, filePath) => {
+    const includePath = resolve(dir, filePath);
+    const content = readFileSync(includePath, "utf-8");
+    return resolveIncludesText(content, dirname(includePath), depth + 1);
+  });
 }
 
 function splitAtThematicBreaks(nodes: RootContent[]): RootContent[][] {
@@ -359,8 +353,8 @@ export function deckPlugin(options: DeckPluginOptions = {}): Plugin {
         code = await options.preprocess(code, id);
       }
       const { data: frontmatter } = parseDeckFrontmatter(code);
+      code = resolveIncludesText(code, dirname(id));
       const root = parseProcessor.parse(code);
-      resolveIncludes(root, dirname(id));
       const { styles, content: contentNodes } = separateAstNodes(root);
 
       if (contentNodes.length === 0) return null;
@@ -465,8 +459,8 @@ export async function processDeckMarkdown(
   if (preprocess) {
     code = await preprocess(code, filePath);
   }
+  code = resolveIncludesText(code, dirname(filePath));
   const root = parseProcessor.parse(code);
-  resolveIncludes(root, dirname(filePath));
   const { content: contentNodes } = separateAstNodes(root);
 
   if (contentNodes.length === 0) return "";
