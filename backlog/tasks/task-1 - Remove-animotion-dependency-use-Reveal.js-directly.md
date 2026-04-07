@@ -1,9 +1,9 @@
 ---
 id: TASK-1
-title: 'Remove animotion dependency, use Reveal.js directly'
+title: "Remove animotion dependency, use Reveal.js directly"
 status: In Progress
 assignee: []
-created_date: '2026-04-02 11:23'
+created_date: "2026-04-02 11:23"
 labels:
   - refactor
   - breaking-change
@@ -14,6 +14,7 @@ priority: medium
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
+
 ## Context
 
 Animotion wraps Reveal.js in Svelte components (`<Presentation>`, `<Slide>`, `<Code>`, `<Action>`, etc.) and is the core runtime dependency of astromotion. However, an audit of 58 `.deck.svx` files across all consuming projects found that only 1 (an example/demo deck) uses any animotion-specific features. The remaining 57 are pure markdown.
@@ -92,15 +93,15 @@ For slides that need step-by-step reveals or animation, the recommended approach
 
 Seven projects on this machine consume astromotion. All 52 deck files are pure markdown (no animotion features) except the one example deck in cyberneticstudio-xyz.
 
-| Project | Path | Deck files |
-|---|---|---|
-| cyberneticstudio-xyz | `~/projects/cyberneticstudio-xyz` | 4 |
-| llms-unplugged | `~/projects/llms-unplugged/website` | 2 |
-| comp1720 | `~/projects/teaching-archive/comp1720` | 11 |
-| comp2300 | `~/projects/teaching-archive/comp2300` | 16 |
-| comp2710-lens | `~/projects/teaching-archive/comp2710-lens` | 17 |
-| astro-theme-anu docs | `~/projects/astro-theme-anu/docs` | 1 |
-| astro-theme-anu template | `~/projects/astro-theme-anu/templates/course-with-slides` | 1 |
+| Project                  | Path                                                      | Deck files |
+| ------------------------ | --------------------------------------------------------- | ---------- |
+| cyberneticstudio-xyz     | `~/projects/cyberneticstudio-xyz`                         | 4          |
+| llms-unplugged           | `~/projects/llms-unplugged/website`                       | 2          |
+| comp1720                 | `~/projects/teaching-archive/comp1720`                    | 11         |
+| comp2300                 | `~/projects/teaching-archive/comp2300`                    | 16         |
+| comp2710-lens            | `~/projects/teaching-archive/comp2710-lens`               | 17         |
+| astro-theme-anu docs     | `~/projects/astro-theme-anu/docs`                         | 1          |
+| astro-theme-anu template | `~/projects/astro-theme-anu/templates/course-with-slides` | 1          |
 
 Additionally, `astro-theme-anu/packages/astro-theme-anu` lists astromotion as an optional peer dependency.
 
@@ -121,21 +122,24 @@ The two animotion slides in `example.deck.svx` need manual porting:
 ### Providing a migration script
 
 Include a `migrate.sh` script or a documented one-liner in the release notes that handles the file rename across a project. The content of the files doesn't change --- only the extension.
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
+
 <!-- AC:BEGIN -->
+
 - [ ] #1 animotion removed from peerDependencies; reveal.js added as direct dependency
 - [ ] #2 SvelteKit environment shim removed
 - [ ] #3 preprocessor emits HTML sections, not Svelte components, by default
-- [ ] #4 preprocessor matches *.deck.md instead of *.deck.svx
+- [ ] #4 preprocessor matches _.deck.md instead of _.deck.svx
 - [ ] #5 syntax highlighting handled by rehype pipeline, not client-side Code component
 - [ ] #6 catch-all route initialises Reveal.js without a framework runtime
 - [ ] #7 frontmatter framework: svelte flag opts a deck into Svelte component output
 - [ ] #8 example deck updated with Reveal.js-native equivalents of animotion demos
 - [ ] #9 all existing tests updated and passing
 - [ ] #10 CLAUDE.md updated to reflect new architecture
-- [ ] #11 all 7 consuming projects migrated: files renamed to *.deck.md, dependencies updated, builds verified
+- [ ] #11 all 7 consuming projects migrated: files renamed to \*.deck.md, dependencies updated, builds verified
 - [ ] #12 migration script or documented one-liner included in release notes
 - [ ] #13 visual regression check: use agent-browser to screenshot representative slides before and after migration, confirming rendered appearance is unchanged
 <!-- AC:END -->

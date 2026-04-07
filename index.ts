@@ -24,9 +24,7 @@ export function astromotion(options: AstromotionOptions = {}): AstroIntegration 
     setGlobalPreprocess(options.preprocess);
   }
 
-  const preprocessModulePath = options.preprocessModule
-    ? resolve(options.preprocessModule)
-    : null;
+  const preprocessModulePath = options.preprocessModule ? resolve(options.preprocessModule) : null;
 
   return {
     name: "astromotion",

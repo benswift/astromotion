@@ -11,10 +11,7 @@ export function parseHtmlComment(html: string): string | null {
   return trimmed.slice(4, -3).trim();
 }
 
-export function parseCommentDirective(
-  html: string,
-  directive: string,
-): string | null {
+export function parseCommentDirective(html: string, directive: string): string | null {
   const body = parseHtmlComment(html);
   if (!body) return null;
   const prefix = directive + ":";
@@ -43,7 +40,14 @@ export function isHtmlTagStart(html: string, tagName: string): boolean {
   const lower = html.trimStart().toLowerCase();
   if (!lower.startsWith(`<${tagName}`)) return false;
   const charAfterTag = lower[tagName.length + 1];
-  return charAfterTag === ">" || charAfterTag === " " || charAfterTag === "\t" || charAfterTag === "\n" || charAfterTag === "/" || charAfterTag === undefined;
+  return (
+    charAfterTag === ">" ||
+    charAfterTag === " " ||
+    charAfterTag === "\t" ||
+    charAfterTag === "\n" ||
+    charAfterTag === "/" ||
+    charAfterTag === undefined
+  );
 }
 
 export function extractScriptContent(raw: string): { attrs: string; body: string } | null {
@@ -159,7 +163,10 @@ function findSrcAttribute(tag: string): { value: string; start: number; end: num
     }
 
     const spaceOrEnd = tag.indexOf(" ", afterEquals);
-    const end = spaceOrEnd === -1 ? tag.indexOf(">", afterEquals) : Math.min(spaceOrEnd, tag.indexOf(">", afterEquals));
+    const end =
+      spaceOrEnd === -1
+        ? tag.indexOf(">", afterEquals)
+        : Math.min(spaceOrEnd, tag.indexOf(">", afterEquals));
     if (end === -1) return null;
     return {
       value: tag.slice(afterEquals, end),

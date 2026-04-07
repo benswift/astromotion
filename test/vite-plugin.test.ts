@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { resolve } from "node:path";
 import { deckPlugin, processDeckMarkdown, setGlobalPreprocess } from "../src/vite-plugin.ts";
 

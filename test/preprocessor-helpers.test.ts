@@ -29,43 +29,33 @@ describe("extractBgImagesFromAst", () => {
   });
 
   it("extracts right-split background images", () => {
-    const nodes: RootContent[] = [
-      makeImageParagraph("bg right:40%", "side.jpg"),
-    ];
+    const nodes: RootContent[] = [makeImageParagraph("bg right:40%", "side.jpg")];
     const { images } = extractBgImagesFromAst(nodes);
     expect(images[0].position).toBe("right");
     expect(images[0].splitPercent).toBe("40%");
   });
 
   it("extracts left-split background images", () => {
-    const nodes: RootContent[] = [
-      makeImageParagraph("bg left:60%", "left.jpg"),
-    ];
+    const nodes: RootContent[] = [makeImageParagraph("bg left:60%", "left.jpg")];
     const { images } = extractBgImagesFromAst(nodes);
     expect(images[0].position).toBe("left");
     expect(images[0].splitPercent).toBe("60%");
   });
 
   it("extracts cover size modifier", () => {
-    const nodes: RootContent[] = [
-      makeImageParagraph("bg cover", "photo.jpg"),
-    ];
+    const nodes: RootContent[] = [makeImageParagraph("bg cover", "photo.jpg")];
     const { images } = extractBgImagesFromAst(nodes);
     expect(images[0].size).toBe("cover");
   });
 
   it("extracts contain size modifier", () => {
-    const nodes: RootContent[] = [
-      makeImageParagraph("bg contain", "photo.jpg"),
-    ];
+    const nodes: RootContent[] = [makeImageParagraph("bg contain", "photo.jpg")];
     const { images } = extractBgImagesFromAst(nodes);
     expect(images[0].size).toBe("contain");
   });
 
   it("extracts filter modifiers", () => {
-    const nodes: RootContent[] = [
-      makeImageParagraph("bg brightness:0.5 blur:2px", "photo.jpg"),
-    ];
+    const nodes: RootContent[] = [makeImageParagraph("bg brightness:0.5 blur:2px", "photo.jpg")];
     const { images } = extractBgImagesFromAst(nodes);
     expect(images[0].filters).toBe("brightness(0.5) blur(2px)");
   });
@@ -94,9 +84,7 @@ describe("extractBgImagesFromAst", () => {
 
 describe("replaceQrImagesInAst", () => {
   it("replaces qr images with SVG HTML nodes", () => {
-    const nodes: RootContent[] = [
-      makeImageParagraph("qr", "https://example.com"),
-    ];
+    const nodes: RootContent[] = [makeImageParagraph("qr", "https://example.com")];
     const result = replaceQrImagesInAst(nodes);
     expect(result).toHaveLength(1);
     expect(result[0].type).toBe("html");

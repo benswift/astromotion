@@ -30,7 +30,18 @@ for (let i = 0; i < 30; i++) {
 try {
   execFileSync(
     "npx",
-    ["decktape", "reveal", "--size", "1280x720", "--load-pause", "5000", "--pause", "4000", url, output],
+    [
+      "decktape",
+      "reveal",
+      "--size",
+      "1280x720",
+      "--load-pause",
+      "5000",
+      "--pause",
+      "4000",
+      url,
+      output,
+    ],
     { stdio: "inherit" },
   );
 } finally {

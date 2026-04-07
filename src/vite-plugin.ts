@@ -188,20 +188,14 @@ function segmentsToJs(segments: Segment[]): string {
   return parts.join(" + ") || "''";
 }
 
-function buildBgSegments(
-  images: BgImage[],
-  imageImportMap: Map<string, string>,
-): Segment[] {
+function buildBgSegments(images: BgImage[], _imageImportMap: Map<string, string>): Segment[] {
   const fullBleed = images.find((img) => !img.position);
   if (!fullBleed) return [];
 
   const size = fullBleed.size || "cover";
 
   if (fullBleed.importVar) {
-    const styleParts = [
-      `background-size: ${size}`,
-      "background-position: center",
-    ];
+    const styleParts = [`background-size: ${size}`, "background-position: center"];
     if (fullBleed.filters) {
       styleParts.push(`filter: ${fullBleed.filters}`);
     }
@@ -220,21 +214,18 @@ function buildBgSegments(
   if (fullBleed.filters) {
     styleParts.push(`filter: ${fullBleed.filters}`);
   }
-  return [{ type: "static", value: `<div class="slide-bg" style="${styleParts.join("; ")}"></div>` }];
+  return [
+    { type: "static", value: `<div class="slide-bg" style="${styleParts.join("; ")}"></div>` },
+  ];
 }
 
-function buildSplitSegments(
-  images: BgImage[],
-  innerSegments: Segment[],
-): Segment[] {
+function buildSplitSegments(images: BgImage[], innerSegments: Segment[]): Segment[] {
   const splitImage = images.find((img) => img.position);
   if (!splitImage) return innerSegments;
 
   const imagePercent = splitImage.splitPercent || "50%";
   const contentPercent = `calc(100% - ${imagePercent})`;
-  const filterPart = splitImage.filters
-    ? `; filter: ${splitImage.filters}`
-    : "";
+  const filterPart = splitImage.filters ? `; filter: ${splitImage.filters}` : "";
 
   let imageSegments: Segment[];
   if (splitImage.importVar) {
@@ -245,7 +236,10 @@ function buildSplitSegments(
     ];
   } else {
     imageSegments = [
-      { type: "static", value: `<div class="split-image" style="background-image: url('${splitImage.url}'); width: ${imagePercent}${filterPart}"></div>` },
+      {
+        type: "static",
+        value: `<div class="split-image" style="background-image: url('${splitImage.url}'); width: ${imagePercent}${filterPart}"></div>`,
+      },
     ];
   }
 
@@ -376,9 +370,7 @@ export function deckPlugin(options: DeckPluginOptions = {}): Plugin {
         const wrappedSegments = buildSplitSegments(images, contentSegments);
         const bgSegments = buildBgSegments(images, imageImportMap);
         const slideAttrs = buildSlideAttrs(slideClass);
-        const notesTag = notesContent
-          ? `<div class="notes">${notesContent}</div>`
-          : "";
+        const notesTag = notesContent ? `<div class="notes">${notesContent}</div>` : "";
 
         const allSegments: Segment[] = [
           { type: "static", value: `<section${slideAttrs}>` },
@@ -404,7 +396,9 @@ export function deckPlugin(options: DeckPluginOptions = {}): Plugin {
         `export const frontmatter = ${JSON.stringify(frontmatter)};`,
         `const slides = ${slidesExpr};`,
         "export default slides;",
-      ].filter(Boolean).join("\n");
+      ]
+        .filter(Boolean)
+        .join("\n");
 
       return { code: output, map: null };
     },
@@ -412,9 +406,7 @@ export function deckPlugin(options: DeckPluginOptions = {}): Plugin {
 }
 
 async function createHtmlProcessor(codeTheme: string | Record<string, unknown>) {
-  const shikiOptions = typeof codeTheme === "string"
-    ? { theme: codeTheme }
-    : codeTheme;
+  const shikiOptions = typeof codeTheme === "string" ? { theme: codeTheme } : codeTheme;
   return unified()
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeShiki, shikiOptions as any)
@@ -478,15 +470,14 @@ export async function processDeckMarkdown(
       const filterPart = splitImage.filters ? `; filter: ${splitImage.filters}` : "";
       const imageDiv = `<div class="split-image" style="background-image: url('${splitImage.url}'); width: ${imagePercent}${filterPart}"></div>`;
       const contentDiv = `<div class="split-content" style="width: ${contentPercent}">${innerHtml}</div>`;
-      innerHtml = splitImage.position === "left"
-        ? `<div class="split-layout">${imageDiv}${contentDiv}</div>`
-        : `<div class="split-layout">${contentDiv}${imageDiv}</div>`;
+      innerHtml =
+        splitImage.position === "left"
+          ? `<div class="split-layout">${imageDiv}${contentDiv}</div>`
+          : `<div class="split-layout">${contentDiv}${imageDiv}</div>`;
     }
 
     const slideAttrs = buildSlideAttrs(slideClass);
-    const notesTag = notesContent
-      ? `<div class="notes">${notesContent}</div>`
-      : "";
+    const notesTag = notesContent ? `<div class="notes">${notesContent}</div>` : "";
 
     slideOutputs.push(`<section${slideAttrs}>${bgDiv}${innerHtml}${notesTag}</section>`);
   }

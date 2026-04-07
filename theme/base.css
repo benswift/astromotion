@@ -118,6 +118,7 @@
       rx: 5;
       ry: 5;
     }
+
     50% {
       rx: 1;
       ry: 1;
@@ -127,8 +128,9 @@
   @keyframes qr-color-light {
     0%,
     100% {
-      fill: #ffffff;
+      fill: #fff;
     }
+
     50% {
       fill: #d0d0d0;
     }
@@ -139,6 +141,7 @@
     100% {
       fill: #be830e;
     }
+
     50% {
       fill: #d9a011;
     }

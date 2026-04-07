@@ -1,23 +1,23 @@
 {
   "name": "astromotion",
   "version": "0.1.0",
-  "type": "module",
   "description": "Astro integration for markdown-authored slide decks powered by Reveal.js, with a bit of Marp syntax",
-  "author": "Ben Swift",
   "license": "MIT",
-  "scripts": {
-    "test": "vitest run",
-    "lint": "oxlint",
-    "format": "oxfmt .",
-    "format:check": "oxfmt --check .",
-    "stylelint": "stylelint 'theme/**/*.css'"
-  },
+  "author": "Ben Swift",
+  "type": "module",
   "exports": {
     ".": "./index.ts",
     "./components/*": "./components/*",
     "./pages/*": "./pages/*",
     "./theme/*": "./theme/*",
     "./src/*": "./src/*"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "lint": "oxlint",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
+    "stylelint": "stylelint 'theme/**/*.css'"
   },
   "dependencies": {
     "@qrgrid/core": "^0.2.4",
@@ -32,6 +32,18 @@
     "unified": "^11.0.5",
     "yaml": "^2.8.3"
   },
+  "devDependencies": {
+    "@e18e/eslint-plugin": "^0.3.0",
+    "eslint-plugin-no-only-tests": "^3.3.0",
+    "eslint-plugin-perfectionist": "^5.8.0",
+    "eslint-plugin-unused-imports": "^4.4.1",
+    "linkedom": "^0.18.12",
+    "oxfmt": "^0.44.0",
+    "oxlint": "^1.59.0",
+    "stylelint": "^17.6.0",
+    "stylelint-config-standard": "^40.0.0",
+    "vitest": "^4.1.2"
+  },
   "peerDependencies": {
     "@astrojs/svelte": "^8.0.0",
     "astro": "^6.0.0",
@@ -44,18 +56,6 @@
     "svelte": {
       "optional": true
     }
-  },
-  "devDependencies": {
-    "@e18e/eslint-plugin": "^0.3.0",
-    "eslint-plugin-no-only-tests": "^3.3.0",
-    "eslint-plugin-perfectionist": "^5.8.0",
-    "eslint-plugin-unused-imports": "^4.4.1",
-    "linkedom": "^0.18.12",
-    "oxfmt": "^0.44.0",
-    "oxlint": "^1.59.0",
-    "stylelint": "^17.6.0",
-    "stylelint-config-standard": "^40.0.0",
-    "vitest": "^4.1.2"
   },
   "pnpm": {
     "overrides": {

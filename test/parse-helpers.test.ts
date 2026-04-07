@@ -126,7 +126,9 @@ describe("parseIncludeDirective", () => {
   });
 
   it("handles relative paths", () => {
-    expect(parseIncludeDirective("<!-- @include ../shared/topic.md -->")).toBe("../shared/topic.md");
+    expect(parseIncludeDirective("<!-- @include ../shared/topic.md -->")).toBe(
+      "../shared/topic.md",
+    );
   });
 });
 
@@ -331,14 +333,16 @@ describe("findRelativeImgSrcs", () => {
   });
 
   it("returns correct start and end positions", () => {
-    const html = "before<img src=\"./photo.jpg\">after";
+    const html = 'before<img src="./photo.jpg">after';
     const result = findRelativeImgSrcs(html);
     expect(result).toHaveLength(1);
     expect(html.slice(result[0].start, result[0].end)).toBe('<img src="./photo.jpg">');
   });
 
   it("does not match data-src or other src-like attributes", () => {
-    const result = findRelativeImgSrcs('<img data-src="./photo.jpg" src="https://cdn.example.com/img.jpg">');
+    const result = findRelativeImgSrcs(
+      '<img data-src="./photo.jpg" src="https://cdn.example.com/img.jpg">',
+    );
     expect(result).toHaveLength(0);
   });
 });

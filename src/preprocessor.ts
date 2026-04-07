@@ -174,13 +174,6 @@ async function astToHtml(nodes: RootContent[], processor: any): Promise<string> 
   return processor.stringify(hast) as string;
 }
 
-function sliceNodesText(nodes: RootContent[], text: string): string {
-  return nodes
-    .filter((n) => n.position)
-    .map((n) => text.slice(n.position!.start.offset, n.position!.end.offset))
-    .join("\n\n");
-}
-
 function buildSlideAttrs(slideClass: string | null): string {
   if (slideClass) {
     return ` class="${slideClass}"`;
@@ -215,9 +208,7 @@ function buildSplitWrapper(images: BgImage[], innerHtml: string): string {
 
   const imagePercent = splitImage.splitPercent || "50%";
   const contentPercent = `calc(100% - ${imagePercent})`;
-  const filterPart = splitImage.filters
-    ? `; filter: ${splitImage.filters}`
-    : "";
+  const filterPart = splitImage.filters ? `; filter: ${splitImage.filters}` : "";
 
   const imageDiv = splitImage.htmlVar
     ? `{@html ${splitImage.htmlVar}}`
@@ -319,7 +310,11 @@ export function deckPreprocessor(options: DeckPreprocessorOptions = {}): Preproc
         const { images, remaining: afterBg } = extractBgImagesFromAst(afterMeta);
 
         for (const img of images) {
-          if (!img.url.startsWith("/") && !img.url.startsWith("http://") && !img.url.startsWith("https://")) {
+          if (
+            !img.url.startsWith("/") &&
+            !img.url.startsWith("http://") &&
+            !img.url.startsWith("https://")
+          ) {
             if (!imageImportMap.has(img.url)) {
               imageImportMap.set(img.url, `__deckImg${imgCounter++}`);
             }
@@ -370,9 +365,7 @@ export function deckPreprocessor(options: DeckPreprocessorOptions = {}): Preproc
 
         const slideAttrs = buildSlideAttrs(slideClass);
         const bgDiv = buildBgDiv(images);
-        const notesTag = notesContent
-          ? `\n    <div class="notes">${notesContent}</div>`
-          : "";
+        const notesTag = notesContent ? `\n    <div class="notes">${notesContent}</div>` : "";
 
         slideOutputs.push(
           `  <section${slideAttrs}>\n    ${bgDiv}${innerHtml}${notesTag}\n  </section>`,
