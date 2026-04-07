@@ -38,74 +38,76 @@
   }
 }
 
-:root {
-  --r-heading1-size: 2.5em;
-  --r-heading2-size: 1.6em;
-  --r-heading3-size: 1.3em;
-  --r-heading4-size: 1em;
-}
-
-.reveal {
-  color: var(--r-main-color);
-  font-family: var(--r-main-font);
-  font-size: var(--r-main-font-size);
-}
-
-.reveal .slides section {
-  display: grid;
-  width: 100%;
-  height: 100%;
-  box-sizing: border-box;
-
-  :is(h1, h2, h3, h4, h5, h6) {
-    color: var(--r-heading-color);
-    font-family: var(--r-heading-font);
-    font-weight: var(--r-heading-font-weight, bold);
-    line-height: var(--r-heading-line-height, 1.2);
+@layer astromotion {
+  :root {
+    --r-heading1-size: 2.5em;
+    --r-heading2-size: 1.6em;
+    --r-heading3-size: 1.3em;
+    --r-heading4-size: 1em;
   }
 
-  h1 {
-    font-size: var(--r-heading1-size);
+  .reveal {
+    color: var(--r-main-color);
+    font-family: var(--r-main-font);
+    font-size: var(--r-main-font-size);
   }
 
-  h2 {
-    font-size: var(--r-heading2-size);
-  }
+  .reveal .slides section {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
 
-  h3 {
-    font-size: var(--r-heading3-size);
-  }
-
-  h4 {
-    font-size: var(--r-heading4-size);
-  }
-
-  a {
-    color: var(--r-link-color);
-
-    &:hover {
-      color: var(--r-link-color-hover, var(--r-link-color));
+    :is(h1, h2, h3, h4, h5, h6) {
+      color: var(--r-heading-color);
+      font-family: var(--r-heading-font);
+      font-weight: var(--r-heading-font-weight, bold);
+      line-height: var(--r-heading-line-height, 1.2);
     }
-  }
 
-  :is(pre, code) {
-    font-family: var(--r-code-font);
-  }
+    h1 {
+      font-size: var(--r-heading1-size);
+    }
 
-  :is(.shiki, .shiki span) {
-    color: var(--shiki-dark);
-    font-style: var(--shiki-dark-font-style);
-    font-weight: var(--shiki-dark-font-weight);
-  }
+    h2 {
+      font-size: var(--r-heading2-size);
+    }
 
-  &:has(.slide-bg) > :not(.slide-bg) {
-    position: relative;
-    z-index: 1;
-  }
+    h3 {
+      font-size: var(--r-heading3-size);
+    }
 
-  &:has(.split-layout) {
-    padding: 0;
-    align-content: stretch;
+    h4 {
+      font-size: var(--r-heading4-size);
+    }
+
+    a {
+      color: var(--r-link-color);
+
+      &:hover {
+        color: var(--r-link-color-hover, var(--r-link-color));
+      }
+    }
+
+    :is(pre, code) {
+      font-family: var(--r-code-font);
+    }
+
+    :is(.shiki, .shiki span) {
+      color: var(--shiki-dark);
+      font-style: var(--shiki-dark-font-style);
+      font-weight: var(--shiki-dark-font-weight);
+    }
+
+    &:has(.slide-bg) > :not(.slide-bg) {
+      position: relative;
+      z-index: 1;
+    }
+
+    &:has(.split-layout) {
+      padding: 0;
+      align-content: stretch;
+    }
   }
 }
 
