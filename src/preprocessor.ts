@@ -9,13 +9,11 @@ import remarkFrontmatter from "remark-frontmatter";
 import remarkRehype from "remark-rehype";
 import rehypeShiki from "@shikijs/rehype";
 import rehypeStringify from "rehype-stringify";
-import { generateLogoSlide } from "./svg/logo-slide.js";
 import { generateQrCode } from "./svg/qr-code.js";
 import { smartypants } from "smartypants";
 
 const DECK_FILE_PATTERN = /\.deck\.svelte$/;
 const INCLUDE_RE = /^<!--\s*@include\s+(\S+)\s*-->$/;
-const LOGO_CLASS_RE = /^(anu-logo|socy-logo)$/;
 const QR_IMAGE_RE = /!\[qr\]\(([^)]+)\)/g;
 
 const REVEAL_OPTIONS = `{ width: 1280, height: 720, margin: 0, hash: true, hashOneBasedIndex: true, controls: false, navigationMode: "linear", transition: "none", disableLayout: true, display: "grid", center: true, viewDistance: 10 }`;
@@ -341,20 +339,6 @@ export function deckPreprocessor(options: DeckPreprocessorOptions = {}): Preproc
         if (group.length === 0) continue;
 
         const { slideClass, notesContent, remaining: afterMeta } = extractMetadataNodes(group);
-
-        const logoMatch = slideClass?.match(LOGO_CLASS_RE);
-        if (logoMatch) {
-          const variant = logoMatch[1] === "anu-logo" ? "anu" as const : "socy" as const;
-          const logoSvg = generateLogoSlide(variant);
-          const slideAttrs = buildSlideAttrs(slideClass);
-          const notesTag = notesContent
-            ? `\n    <div class="notes">${notesContent}</div>`
-            : "";
-          slideOutputs.push(
-            `  <section${slideAttrs}>\n    ${logoSvg}${notesTag}\n  </section>`,
-          );
-          continue;
-        }
 
         const { images, remaining: afterBg } = extractBgImagesFromAst(afterMeta);
 

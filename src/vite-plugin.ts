@@ -9,7 +9,6 @@ import remarkFrontmatter from "remark-frontmatter";
 import remarkRehype from "remark-rehype";
 import rehypeShiki from "@shikijs/rehype";
 import rehypeStringify from "rehype-stringify";
-import { generateLogoSlide } from "./svg/logo-slide.js";
 import { generateQrCode } from "./svg/qr-code.js";
 import { smartypants } from "smartypants";
 import { parseDeckFrontmatter } from "./meta.js";
@@ -24,7 +23,6 @@ export function setGlobalPreprocess(fn: PreprocessFn): void {
 
 const DECK_FILE_PATTERN = /\.deck\.md$/;
 const INCLUDE_RE = /^<!--\s*@include\s+(\S+)\s*-->$/;
-const LOGO_CLASS_RE = /^(anu-logo|socy-logo)$/;
 
 interface BgImage {
   url: string;
@@ -377,18 +375,6 @@ export function deckPlugin(options: DeckPluginOptions = {}): Plugin {
 
         const { slideClass, notesContent, remaining: afterMeta } = extractMetadataNodes(group);
 
-        const logoMatch = slideClass?.match(LOGO_CLASS_RE);
-        if (logoMatch) {
-          const variant = logoMatch[1] === "anu-logo" ? "anu" as const : "socy" as const;
-          const logoSvg = generateLogoSlide(variant);
-          const slideAttrs = buildSlideAttrs(slideClass);
-          const notesTag = notesContent
-            ? `<div class="notes">${notesContent}</div>`
-            : "";
-          slideExprs.push(`'${escapeForJs(`<section${slideAttrs}>${logoSvg}${notesTag}</section>`)}'`);
-          continue;
-        }
-
         const { images, remaining: afterBg } = extractBgImagesFromAst(afterMeta);
 
         for (const img of images) {
@@ -492,18 +478,6 @@ export async function processDeckMarkdown(
     if (group.length === 0) continue;
 
     const { slideClass, notesContent, remaining: afterMeta } = extractMetadataNodes(group);
-
-    const logoMatch = slideClass?.match(LOGO_CLASS_RE);
-    if (logoMatch) {
-      const variant = logoMatch[1] === "anu-logo" ? "anu" as const : "socy" as const;
-      const logoSvg = generateLogoSlide(variant);
-      const slideAttrs = buildSlideAttrs(slideClass);
-      const notesTag = notesContent
-        ? `<div class="notes">${notesContent}</div>`
-        : "";
-      slideOutputs.push(`<section${slideAttrs}>${logoSvg}${notesTag}</section>`);
-      continue;
-    }
 
     const { images, remaining: afterBg } = extractBgImagesFromAst(afterMeta);
 

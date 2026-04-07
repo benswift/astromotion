@@ -252,18 +252,16 @@ describe("processDeckMarkdown HTML output", () => {
   });
 
   describe("logo slides", () => {
-    it("generates SVG for anu-logo class", async () => {
+    it("passes anu-logo class through as a regular CSS class", async () => {
       const doc = await processFixture("qr-and-logo.deck.md");
       const anuSlide = sections(doc)[1];
       expect(anuSlide.classList.contains("anu-logo")).toBe(true);
-      expect(anuSlide.querySelector("svg")).not.toBeNull();
     });
 
-    it("generates SVG for socy-logo class", async () => {
+    it("passes socy-logo class through as a regular CSS class", async () => {
       const doc = await processFixture("qr-and-logo.deck.md");
       const socySlide = sections(doc)[2];
       expect(socySlide.classList.contains("socy-logo")).toBe(true);
-      expect(socySlide.querySelector("svg")).not.toBeNull();
     });
   });
 
