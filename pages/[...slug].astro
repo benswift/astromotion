@@ -10,7 +10,7 @@ import path from "node:path";
 
 export async function getStaticPaths() {
   const decksDir = path.resolve("src/decks");
-  const DECK_MD_RE = /^(.+)\.deck\.md$/;
+  const DECK_MD_RE = /^(.+)\.deck\.(md|svx)$/;
   const DECK_SVELTE_RE = /^(.+)\.deck\.svelte$/;
   const results: Array<{ params: { slug: string }; props: Record<string, unknown> }> = [];
 

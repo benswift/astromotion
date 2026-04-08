@@ -21,7 +21,7 @@ import {
   findRelativeImgSrcs,
 } from "./parse-helpers.js";
 
-const DECK_FILE_PATTERN = /\.deck\.svelte$/;
+const DECK_FILE_PATTERN = /\.deck\.(svelte|svx)$/;
 
 const REVEAL_OPTIONS = `{ width: 1280, height: 720, margin: 0, hash: true, hashOneBasedIndex: true, controls: false, navigationMode: "linear", transition: "none", disableLayout: true, display: "grid", center: true, viewDistance: 10 }`;
 
