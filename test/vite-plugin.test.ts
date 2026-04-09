@@ -116,6 +116,52 @@ describe("deckPlugin", () => {
     });
   });
 
+  describe("relative image imports", () => {
+    it("generates import statements for relative bg images", async () => {
+      const code = await process("relative-images.deck.md");
+      expect(code).toMatch(/import __deckImg\d+ from '\.\//);
+    });
+
+    it("uses import variables in background image expressions", async () => {
+      const code = await process("relative-images.deck.md");
+      expect(code).toContain("__deckImg");
+      expect(code).toContain("slide-bg");
+    });
+
+    it("generates import for relative inline images", async () => {
+      const code = await process("relative-images.deck.md");
+      const importCount = (code.match(/import __deckImg/g) || []).length;
+      expect(importCount).toBeGreaterThanOrEqual(4);
+    });
+
+    it("preserves absolute URLs without import", async () => {
+      const code = await process("relative-images.deck.md");
+      expect(code).toContain("https://example.com/absolute.jpg");
+    });
+
+    it("does not generate imports for absolute URLs", async () => {
+      const code = await process("relative-images.deck.md");
+      const importLines = code.split("\n").filter((l: string) => l.startsWith("import __deckImg"));
+      for (const line of importLines) {
+        expect(line).not.toContain("https://");
+      }
+    });
+
+    it("deduplicates imports for the same image path", async () => {
+      const twoSameImages = `---\ntitle: Test\n---\n\n![bg](./assets/hero.jpg)\n\n---\n\n![bg](./assets/hero.jpg)\n`;
+      const id = resolve(FIXTURES, "test-dedup.deck.md");
+      const { writeFileSync, unlinkSync } = await import("node:fs");
+      writeFileSync(id, twoSameImages);
+      try {
+        const code = await process("test-dedup.deck.md");
+        const imports = code.split("\n").filter((l: string) => l.startsWith("import __deckImg"));
+        expect(imports.length).toBe(1);
+      } finally {
+        unlinkSync(id);
+      }
+    });
+  });
+
   describe("code blocks", () => {
     it("renders syntax-highlighted code at build time", async () => {
       const code = await process("code-blocks.deck.md");
