@@ -157,7 +157,9 @@ Also Marp-inspired:
 - `![bg blur:5px brightness:0.7 saturate:1.5](url)` --- CSS filters (blur,
   brightness, and saturate can be combined freely)
 
-Absolute paths (`/images/...`) reference `public/`.
+Image paths must be relative to the deck file (e.g. `./assets/photo.jpg`).
+Absolute paths like `/images/...` are not resolved and will break on subpath
+deployments.
 
 ### Include directives
 

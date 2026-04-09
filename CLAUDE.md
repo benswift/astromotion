@@ -42,6 +42,14 @@ Both paths share a unified remark/rehype pipeline plus custom transforms for
 includes, bg images, QR codes, logo slides, metadata directives, and
 smartypants.
 
+## Image paths
+
+Deck images must use relative paths (e.g. `./assets/photo.jpg`). Relative paths
+are resolved via Vite imports in the plugin path and via `resolveImageUrl` (which
+prepends `config.base`) in the static HTML path. Absolute paths (`/images/...`)
+are passed through unmodified and will 404 on subpath deployments --- this is
+intentional to fail early rather than mask content bugs.
+
 ## Key design decisions
 
 - `disableLayout: true` + `display: "grid"` in Reveal.js options so that
