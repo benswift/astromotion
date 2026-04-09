@@ -418,6 +418,27 @@ function buildSlideAttrs(slideClass: string | null): string {
   return "";
 }
 
+function resolveImageUrl(url: string, deckDir: string): string {
+  if (!isRelativeUrl(url)) return url;
+  return `/@fs/${resolve(deckDir, url)}`;
+}
+
+function resolveInlineImgSrcs(html: string, deckDir: string): string {
+  const imgTags = findRelativeImgSrcs(html);
+  if (imgTags.length === 0) return html;
+
+  let result = "";
+  let lastIndex = 0;
+  for (const tag of imgTags) {
+    result += html.slice(lastIndex, tag.start);
+    const resolved = resolveImageUrl(tag.src, deckDir);
+    result += `<img${tag.before}src="${resolved}"${tag.after}>`;
+    lastIndex = tag.end;
+  }
+  result += html.slice(lastIndex);
+  return result;
+}
+
 export async function processDeckMarkdown(
   code: string,
   filePath: string,
@@ -425,13 +446,14 @@ export async function processDeckMarkdown(
 ): Promise<string> {
   const codeTheme = options.codeTheme ?? "vitesse-dark";
   const htmlProcessor = await createHtmlProcessor(codeTheme);
+  const deckDir = dirname(filePath);
 
   const preprocess = options.preprocess ?? globalPreprocess;
   if (preprocess) {
     code = await preprocess(code, filePath);
   }
   const root = parseProcessor.parse(code);
-  resolveIncludes(root, dirname(filePath));
+  resolveIncludes(root, deckDir);
   const { content: contentNodes } = separateAstNodes(root, { extractStyles: false });
 
   if (contentNodes.length === 0) return "";
@@ -449,13 +471,15 @@ export async function processDeckMarkdown(
     const afterQr = replaceQrImagesInAst(afterBg);
     let innerHtml = await astToHtml(afterQr, htmlProcessor);
     innerHtml = smartypants(innerHtml, "2");
+    innerHtml = resolveInlineImgSrcs(innerHtml, deckDir);
 
     const fullBleed = images.find((img) => !img.position);
     let bgDiv = "";
     if (fullBleed) {
       const size = fullBleed.size || "cover";
+      const resolved = resolveImageUrl(fullBleed.url, deckDir);
       const styleParts = [
-        `background-image: url('${fullBleed.url}')`,
+        `background-image: url('${resolved}')`,
         `background-size: ${size}`,
         "background-position: center",
       ];
@@ -468,7 +492,8 @@ export async function processDeckMarkdown(
       const imagePercent = splitImage.splitPercent || "50%";
       const contentPercent = `calc(100% - ${imagePercent})`;
       const filterPart = splitImage.filters ? `; filter: ${splitImage.filters}` : "";
-      const imageDiv = `<div class="split-image" style="background-image: url('${splitImage.url}'); width: ${imagePercent}${filterPart}"></div>`;
+      const resolved = resolveImageUrl(splitImage.url, deckDir);
+      const imageDiv = `<div class="split-image" style="background-image: url('${resolved}'); width: ${imagePercent}${filterPart}"></div>`;
       const contentDiv = `<div class="split-content" style="width: ${contentPercent}">${innerHtml}</div>`;
       innerHtml =
         splitImage.position === "left"
