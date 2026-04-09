@@ -1,7 +1,7 @@
 import type { Plugin } from "vite";
 import type { Root, RootContent, Html } from "mdast";
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname, relative, resolve } from "node:path";
 import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
@@ -30,8 +30,6 @@ export function setGlobalPreprocess(fn: PreprocessFn): void {
 }
 
 const DECK_FILE_PATTERN = /\.deck\.md$/;
-const DECK_SLIDES_QUERY = /\.deck\.md\?slides$/;
-const VIRTUAL_DECK_PREFIX = "\0astromotion-deck:";
 
 interface BgImage {
   url: string;
@@ -316,24 +314,18 @@ export function deckPlugin(options: DeckPluginOptions = {}): Plugin {
     name: "astromotion-deck",
     enforce: "pre",
     resolveId(id) {
-      if (id.startsWith("virtual:astromotion/deck?")) {
-        const params = new URLSearchParams(id.slice("virtual:astromotion/deck?".length));
-        return VIRTUAL_DECK_PREFIX + params.get("path");
-      }
       if (DECK_FILE_PATTERN.test(id)) {
         return id;
       }
     },
     async load(id) {
-      const isVirtualDeck = id.startsWith(VIRTUAL_DECK_PREFIX);
-      const filePath = isVirtualDeck ? id.slice(VIRTUAL_DECK_PREFIX.length) : id;
-      if (!isVirtualDeck && !DECK_FILE_PATTERN.test(id)) return null;
+      if (!DECK_FILE_PATTERN.test(id)) return null;
 
       if (!htmlProcessor) {
         htmlProcessor = await createHtmlProcessor(codeTheme);
       }
 
-      let code = readFileSync(filePath, "utf-8");
+      let code = readFileSync(id, "utf-8");
       if (options.preprocess) {
         code = await options.preprocess(code, id);
       }
@@ -426,6 +418,29 @@ function buildSlideAttrs(slideClass: string | null): string {
   return "";
 }
 
+function resolveImageUrl(url: string, deckDir: string): string {
+  if (!isRelativeUrl(url)) return url;
+  const absolute = resolve(deckDir, url);
+  const root = resolve(".");
+  return "/" + relative(root, absolute);
+}
+
+function resolveInlineImgSrcs(html: string, deckDir: string): string {
+  const imgTags = findRelativeImgSrcs(html);
+  if (imgTags.length === 0) return html;
+
+  let result = "";
+  let lastIndex = 0;
+  for (const tag of imgTags) {
+    result += html.slice(lastIndex, tag.start);
+    const resolved = resolveImageUrl(tag.src, deckDir);
+    result += `<img${tag.before}src="${resolved}"${tag.after}>`;
+    lastIndex = tag.end;
+  }
+  result += html.slice(lastIndex);
+  return result;
+}
+
 export async function processDeckMarkdown(
   code: string,
   filePath: string,
@@ -433,13 +448,14 @@ export async function processDeckMarkdown(
 ): Promise<string> {
   const codeTheme = options.codeTheme ?? "vitesse-dark";
   const htmlProcessor = await createHtmlProcessor(codeTheme);
+  const deckDir = dirname(filePath);
 
   const preprocess = options.preprocess ?? globalPreprocess;
   if (preprocess) {
     code = await preprocess(code, filePath);
   }
   const root = parseProcessor.parse(code);
-  resolveIncludes(root, dirname(filePath));
+  resolveIncludes(root, deckDir);
   const { content: contentNodes } = separateAstNodes(root, { extractStyles: false });
 
   if (contentNodes.length === 0) return "";
@@ -457,13 +473,15 @@ export async function processDeckMarkdown(
     const afterQr = replaceQrImagesInAst(afterBg);
     let innerHtml = await astToHtml(afterQr, htmlProcessor);
     innerHtml = smartypants(innerHtml, "2");
+    innerHtml = resolveInlineImgSrcs(innerHtml, deckDir);
 
     const fullBleed = images.find((img) => !img.position);
     let bgDiv = "";
     if (fullBleed) {
       const size = fullBleed.size || "cover";
+      const resolved = resolveImageUrl(fullBleed.url, deckDir);
       const styleParts = [
-        `background-image: url('${fullBleed.url}')`,
+        `background-image: url('${resolved}')`,
         `background-size: ${size}`,
         "background-position: center",
       ];
@@ -476,7 +494,8 @@ export async function processDeckMarkdown(
       const imagePercent = splitImage.splitPercent || "50%";
       const contentPercent = `calc(100% - ${imagePercent})`;
       const filterPart = splitImage.filters ? `; filter: ${splitImage.filters}` : "";
-      const imageDiv = `<div class="split-image" style="background-image: url('${splitImage.url}'); width: ${imagePercent}${filterPart}"></div>`;
+      const resolved = resolveImageUrl(splitImage.url, deckDir);
+      const imageDiv = `<div class="split-image" style="background-image: url('${resolved}'); width: ${imagePercent}${filterPart}"></div>`;
       const contentDiv = `<div class="split-content" style="width: ${contentPercent}">${innerHtml}</div>`;
       innerHtml =
         splitImage.position === "left"
@@ -491,4 +510,22 @@ export async function processDeckMarkdown(
   }
 
   return slideOutputs.join("\n");
+}
+
+export function collectDeckAssets(decksDir: string): string[] {
+  const assets: string[] = [];
+
+  function walk(dir: string) {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = resolve(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(full);
+      } else if (!/\.deck\.(md|svx|svelte)$/.test(entry.name) && !entry.name.endsWith(".css")) {
+        assets.push(full);
+      }
+    }
+  }
+
+  walk(decksDir);
+  return assets;
 }

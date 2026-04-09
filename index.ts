@@ -1,8 +1,8 @@
 import type { AstroIntegration } from "astro";
-import { resolve } from "node:path";
+import { copyFileSync, mkdirSync } from "node:fs";
+import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { dirname } from "node:path";
-import { deckPlugin, setGlobalPreprocess } from "./src/vite-plugin.ts";
+import { collectDeckAssets, deckPlugin, setGlobalPreprocess } from "./src/vite-plugin.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -26,10 +26,13 @@ export function astromotion(options: AstromotionOptions = {}): AstroIntegration 
 
   const preprocessModulePath = options.preprocessModule ? resolve(options.preprocessModule) : null;
 
+  let projectRoot = "";
+
   return {
     name: "astromotion",
     hooks: {
-      "astro:config:setup"({ updateConfig, injectRoute }) {
+      "astro:config:setup"({ updateConfig, injectRoute, config }) {
+        projectRoot = fileURLToPath(config.root);
         const codeThemeValue = options.codeTheme ?? "vitesse-dark";
         const codeThemeModule = `export default ${JSON.stringify(codeThemeValue)};`;
 
@@ -66,6 +69,23 @@ export function astromotion(options: AstromotionOptions = {}): AstroIntegration 
             pattern: "/decks/[...slug]",
             entrypoint: "astromotion/pages/[...slug].astro",
           });
+        }
+      },
+      "astro:build:done"({ dir, logger }) {
+        const decksDir = resolve(projectRoot, "src/decks");
+        try {
+          const assets = collectDeckAssets(decksDir);
+          for (const asset of assets) {
+            const relPath = relative(projectRoot, asset);
+            const dest = resolve(fileURLToPath(dir), relPath);
+            mkdirSync(dirname(dest), { recursive: true });
+            copyFileSync(asset, dest);
+          }
+          if (assets.length > 0) {
+            logger.info(`Copied ${assets.length} deck asset(s) to build output.`);
+          }
+        } catch {
+          // No src/decks directory — nothing to copy
         }
       },
     },
