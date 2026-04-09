@@ -30,7 +30,7 @@ export async function getStaticPaths() {
         let slidesHtml = "";
         let frontmatter: Record<string, unknown> = {};
         if (!isSvelte) {
-          const mod = await import(filePath);
+          const mod = await import(`virtual:astromotion/deck?path=${filePath}`);
           slidesHtml = mod.default;
           frontmatter = mod.frontmatter ?? {};
         } else {
@@ -64,7 +64,7 @@ export async function getStaticPaths() {
       let slidesHtml = "";
       let frontmatter: Record<string, unknown> = {};
       if (!isSvelte) {
-        const mod = await import(filePath);
+        const mod = await import(`virtual:astromotion/deck?path=${filePath}`);
         slidesHtml = mod.default;
         frontmatter = mod.frontmatter ?? {};
       } else {

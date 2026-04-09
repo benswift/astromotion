@@ -30,6 +30,8 @@ export function setGlobalPreprocess(fn: PreprocessFn): void {
 }
 
 const DECK_FILE_PATTERN = /\.deck\.md$/;
+const DECK_SLIDES_QUERY = /\.deck\.md\?slides$/;
+const VIRTUAL_DECK_PREFIX = "\0astromotion-deck:";
 
 interface BgImage {
   url: string;
@@ -314,18 +316,24 @@ export function deckPlugin(options: DeckPluginOptions = {}): Plugin {
     name: "astromotion-deck",
     enforce: "pre",
     resolveId(id) {
+      if (id.startsWith("virtual:astromotion/deck?")) {
+        const params = new URLSearchParams(id.slice("virtual:astromotion/deck?".length));
+        return VIRTUAL_DECK_PREFIX + params.get("path");
+      }
       if (DECK_FILE_PATTERN.test(id)) {
         return id;
       }
     },
     async load(id) {
-      if (!DECK_FILE_PATTERN.test(id)) return null;
+      const isVirtualDeck = id.startsWith(VIRTUAL_DECK_PREFIX);
+      const filePath = isVirtualDeck ? id.slice(VIRTUAL_DECK_PREFIX.length) : id;
+      if (!isVirtualDeck && !DECK_FILE_PATTERN.test(id)) return null;
 
       if (!htmlProcessor) {
         htmlProcessor = await createHtmlProcessor(codeTheme);
       }
 
-      let code = readFileSync(id, "utf-8");
+      let code = readFileSync(filePath, "utf-8");
       if (options.preprocess) {
         code = await options.preprocess(code, id);
       }
