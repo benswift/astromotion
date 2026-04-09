@@ -1,5 +1,5 @@
 import type { Plugin } from "vite";
-import type { Root, RootContent, Html } from "mdast";
+import type { Root, RootContent, Html, Image } from "mdast";
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { unified } from "unified";
@@ -18,7 +18,6 @@ import {
   parseIncludeDirective,
   isHtmlTagStart,
   parseBgModifiers,
-  findRelativeImgSrcs,
 } from "./parse-helpers.js";
 
 type PreprocessFn = (markdown: string, filePath: string) => string | Promise<string>;
@@ -265,45 +264,11 @@ function buildSplitSegments(images: BgImage[], innerSegments: Segment[]): Segmen
   ];
 }
 
-function replaceRelativeImgSrcs(
-  html: string,
-  imageImportMap: Map<string, string>,
-  imgCounter: { value: number },
-): { segments: Segment[] } {
-  const imgTags = findRelativeImgSrcs(html);
-  if (imgTags.length === 0) {
-    return { segments: [{ type: "static", value: html }] };
-  }
-
-  const segments: Segment[] = [];
-  let lastIndex = 0;
-
-  for (const tag of imgTags) {
-    if (tag.start > lastIndex) {
-      segments.push({ type: "static", value: html.slice(lastIndex, tag.start) });
-    }
-
-    if (!imageImportMap.has(tag.src)) {
-      imageImportMap.set(tag.src, `__deckImg${imgCounter.value++}`);
-    }
-    const varName = imageImportMap.get(tag.src)!;
-    segments.push({ type: "static", value: `<img${tag.before}src="` });
-    segments.push({ type: "expr", value: imgSrcExpr(varName) });
-    segments.push({ type: "static", value: `"${tag.after}>` });
-
-    lastIndex = tag.end;
-  }
-
-  if (lastIndex < html.length) {
-    segments.push({ type: "static", value: html.slice(lastIndex) });
-  }
-
-  return { segments };
-}
-
 interface DeckPluginOptions {
   codeTheme?: string | Record<string, unknown>;
   preprocess?: (markdown: string, filePath: string) => string | Promise<string>;
+  /** Base path for resolved asset URLs in static HTML output (e.g. "/comp1720"). Not needed for the Vite plugin path where imports handle resolution. */
+  base?: string;
 }
 
 export function deckPlugin(options: DeckPluginOptions = {}): Plugin {
@@ -358,14 +323,11 @@ export function deckPlugin(options: DeckPluginOptions = {}): Plugin {
         }
 
         const afterQr = replaceQrImagesInAst(afterBg);
+        collectAstImageImports(afterQr, imageImportMap, imgCounter);
         let innerHtml = await astToHtml(afterQr, htmlProcessor);
         innerHtml = smartypants(innerHtml, "2");
 
-        const { segments: contentSegments } = replaceRelativeImgSrcs(
-          innerHtml,
-          imageImportMap,
-          imgCounter,
-        );
+        const contentSegments = htmlToSegments(innerHtml);
 
         const wrappedSegments = buildSplitSegments(images, contentSegments);
         const bgSegments = buildBgSegments(images, imageImportMap);
@@ -418,27 +380,65 @@ function buildSlideAttrs(slideClass: string | null): string {
   return "";
 }
 
-function resolveImageUrl(url: string, deckDir: string): string {
+function resolveImageUrl(url: string, deckDir: string, base = ""): string {
   if (!isRelativeUrl(url)) return url;
   const absolute = resolve(deckDir, url);
   const root = resolve(".");
-  return "/" + relative(root, absolute);
+  return base + "/" + relative(root, absolute);
 }
 
-function resolveInlineImgSrcs(html: string, deckDir: string): string {
-  const imgTags = findRelativeImgSrcs(html);
-  if (imgTags.length === 0) return html;
-
-  let result = "";
-  let lastIndex = 0;
-  for (const tag of imgTags) {
-    result += html.slice(lastIndex, tag.start);
-    const resolved = resolveImageUrl(tag.src, deckDir);
-    result += `<img${tag.before}src="${resolved}"${tag.after}>`;
-    lastIndex = tag.end;
+/** Walk mdast nodes and resolve relative image URLs in-place (for static HTML output). */
+function resolveAstImageUrls(nodes: RootContent[], deckDir: string, base = ""): void {
+  for (const node of nodes) {
+    if (node.type === "image" && isRelativeUrl((node as Image).url)) {
+      (node as Image).url = resolveImageUrl((node as Image).url, deckDir, base);
+    }
+    if ("children" in node) {
+      resolveAstImageUrls((node as any).children, deckDir, base);
+    }
   }
-  result += html.slice(lastIndex);
-  return result;
+}
+
+const IMPORT_TOKEN_RE = /__DECK_IMPORT_(\w+)__/g;
+
+/** Walk mdast nodes, collect relative image URLs into the import map, and replace with placeholder tokens (for Vite output). */
+function collectAstImageImports(
+  nodes: RootContent[],
+  imageImportMap: Map<string, string>,
+  imgCounter: { value: number },
+): void {
+  for (const node of nodes) {
+    if (node.type === "image" && isRelativeUrl((node as Image).url)) {
+      const url = (node as Image).url;
+      if (!imageImportMap.has(url)) {
+        imageImportMap.set(url, `__deckImg${imgCounter.value++}`);
+      }
+      (node as Image).url = `__DECK_IMPORT_${imageImportMap.get(url)}__`;
+    }
+    if ("children" in node) {
+      collectAstImageImports((node as any).children, imageImportMap, imgCounter);
+    }
+  }
+}
+
+/** Split an HTML string on import placeholder tokens into static/expr segments. */
+function htmlToSegments(html: string): Segment[] {
+  const segments: Segment[] = [];
+  let lastIndex = 0;
+
+  for (const match of html.matchAll(IMPORT_TOKEN_RE)) {
+    if (match.index > lastIndex) {
+      segments.push({ type: "static", value: html.slice(lastIndex, match.index) });
+    }
+    segments.push({ type: "expr", value: imgSrcExpr(match[1]) });
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < html.length) {
+    segments.push({ type: "static", value: html.slice(lastIndex) });
+  }
+
+  return segments;
 }
 
 export async function processDeckMarkdown(
@@ -447,6 +447,7 @@ export async function processDeckMarkdown(
   options: DeckPluginOptions = {},
 ): Promise<string> {
   const codeTheme = options.codeTheme ?? "vitesse-dark";
+  const base = options.base ?? "";
   const htmlProcessor = await createHtmlProcessor(codeTheme);
   const deckDir = dirname(filePath);
 
@@ -471,15 +472,15 @@ export async function processDeckMarkdown(
     const { images, remaining: afterBg } = extractBgImagesFromAst(afterMeta);
 
     const afterQr = replaceQrImagesInAst(afterBg);
+    resolveAstImageUrls(afterQr, deckDir, base);
     let innerHtml = await astToHtml(afterQr, htmlProcessor);
     innerHtml = smartypants(innerHtml, "2");
-    innerHtml = resolveInlineImgSrcs(innerHtml, deckDir);
 
     const fullBleed = images.find((img) => !img.position);
     let bgDiv = "";
     if (fullBleed) {
       const size = fullBleed.size || "cover";
-      const resolved = resolveImageUrl(fullBleed.url, deckDir);
+      const resolved = resolveImageUrl(fullBleed.url, deckDir, base);
       const styleParts = [
         `background-image: url('${resolved}')`,
         `background-size: ${size}`,
@@ -494,7 +495,7 @@ export async function processDeckMarkdown(
       const imagePercent = splitImage.splitPercent || "50%";
       const contentPercent = `calc(100% - ${imagePercent})`;
       const filterPart = splitImage.filters ? `; filter: ${splitImage.filters}` : "";
-      const resolved = resolveImageUrl(splitImage.url, deckDir);
+      const resolved = resolveImageUrl(splitImage.url, deckDir, base);
       const imageDiv = `<div class="split-image" style="background-image: url('${resolved}'); width: ${imagePercent}${filterPart}"></div>`;
       const contentDiv = `<div class="split-content" style="width: ${contentPercent}">${innerHtml}</div>`;
       innerHtml =
