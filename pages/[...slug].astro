@@ -95,10 +95,10 @@ const { title, description, image, deckPath, isSvelte, slidesHtml } = Astro.prop
       controls: false,
       navigationMode: "linear",
       transition: "none",
-      disableLayout: true,
       display: "grid",
       center: true,
       viewDistance: 10,
+      maxScale: 4,
     });
     deck.initialize();
   </script>

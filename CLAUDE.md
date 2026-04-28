@@ -52,10 +52,15 @@ intentional to fail early rather than mask content bugs.
 
 ## Key design decisions
 
-- `disableLayout: true` + `display: "grid"` in Reveal.js options so that
-  consuming themes can use `place-content: center` on sections
-- `theme/base.css` sets `display: grid` on `.reveal .slides section` for the
-  same reason
+- Slides render onto a fixed 1280×720 canvas, scaled to fit the viewport via
+  Reveal.js's built-in `transform: scale()` layout. `maxScale: 4` lifts
+  Reveal's default 2.0 cap so 4K monitors fill rather than letterbox. Slides
+  look pixel-identical at any viewport because the rem/px units are anchored
+  to the canvas, not the viewport.
+- `display: "grid"` in Reveal.js options + matching `display: grid` in
+  `theme/base.css` so consuming themes can use `place-content: center` on
+  sections (Reveal sets `display` inline on the active section, so the config
+  option is what propagates `grid` rather than the default `block`).
 - Speaker notes use `<div class="notes">` not `<aside class="notes">` to avoid
   a11y landmark violations in consuming projects
 - Deck pages must not use Astro's `<ClientRouter />` (conflicts with Reveal.js

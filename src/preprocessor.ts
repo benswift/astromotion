@@ -23,7 +23,7 @@ import {
 
 const DECK_FILE_PATTERN = /\.deck\.(svelte|svx)$/;
 
-const REVEAL_OPTIONS = `{ width: 1280, height: 720, margin: 0, hash: true, hashOneBasedIndex: true, controls: false, navigationMode: "linear", transition: "none", disableLayout: true, display: "grid", center: true, viewDistance: 10 }`;
+const REVEAL_OPTIONS = `{ width: 1280, height: 720, margin: 0, hash: true, hashOneBasedIndex: true, controls: false, navigationMode: "linear", transition: "none", display: "grid", center: true, viewDistance: 10, maxScale: 4 }`;
 
 interface BgImage {
   url: string;

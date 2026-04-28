@@ -1,5 +1,31 @@
 # Changelog
 
+## 2026-04-29
+
+### Slides now render onto a fixed 1280×720 canvas
+
+Reveal.js's `disableLayout: true` flag has been dropped from both the `.deck.md`
+catch-all route and the `.deck.svelte` preprocessor. With layout enabled,
+Reveal renders slides at the configured 1280×720 canvas and applies a
+`transform: scale()` to fit the viewport, so a deck looks pixel-identical at
+any resolution from a thumbnail up to 4K.
+
+`maxScale: 4` was added alongside the flip to lift Reveal's default 2.0 scale
+cap, which would otherwise letterbox 4K monitors (3.0× scale needed). The
+`display: "grid"` Reveal option remains, so consuming themes can keep using
+`place-content: center` on sections.
+
+**Behaviour change for authors:** the slide canvas was previously
+viewport-sized (e.g. 1920×1080 on a full-HD monitor); it is now a fixed
+1280×720. Decks authored to fit a stretched viewport may need their content
+trimmed to fit a 720-tall canvas. Typical content sizes in the
+`astro-theme-anu` deck.css fit comfortably; very dense slides should be
+spot-checked.
+
+**No theme-CSS changes required.** Consuming themes' rem/px sizing, padding,
+`place-content` rules, absolute positioning, and split/QR layouts all work the
+same way against a fixed canvas as they did against a viewport-sized one.
+
 ## 2026-04-09
 
 ### Image resolution rewritten --- relative paths only
