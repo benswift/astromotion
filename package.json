@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@qrgrid/core": "^0.2.4",
-    "@shikijs/rehype": "^3.4.2",
+    "@shikijs/rehype": "^3.23.0",
     "rehype-stringify": "^10.0.1",
     "remark-frontmatter": "^5.0.0",
     "remark-gfm": "^4.0.1",
@@ -34,15 +34,15 @@
   },
   "devDependencies": {
     "@e18e/eslint-plugin": "^0.3.0",
-    "eslint-plugin-no-only-tests": "^3.3.0",
-    "eslint-plugin-perfectionist": "^5.8.0",
+    "eslint-plugin-no-only-tests": "^3.4.0",
+    "eslint-plugin-perfectionist": "^5.9.0",
     "eslint-plugin-unused-imports": "^4.4.1",
     "linkedom": "^0.18.12",
     "oxfmt": "^0.44.0",
-    "oxlint": "^1.59.0",
-    "stylelint": "^17.6.0",
+    "oxlint": "^1.62.0",
+    "stylelint": "^17.9.1",
     "stylelint-config-standard": "^40.0.0",
-    "vitest": "^4.1.2"
+    "vitest": "^4.1.5"
   },
   "peerDependencies": {
     "@astrojs/svelte": "^8.0.0",

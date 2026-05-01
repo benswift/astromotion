@@ -16,6 +16,7 @@
     "eqeqeq": "error",
     "import/no-unassigned-import": "off",
     "no-await-in-loop": "off",
-    "no-shadow": "off"
+    "no-shadow": "off",
+    "no-underscore-dangle": ["error", { "allow": ["__dirname", "__filename"] }]
   }
 }
