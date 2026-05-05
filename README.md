@@ -36,72 +36,44 @@ export default defineConfig({
 });
 ```
 
-The integration registers a Vite plugin that transforms `.deck.md` files into
-HTML slides, injects the `/decks/[...slug]` catch-all route, resolves your
-theme CSS, and initialises Reveal.js on the client. No framework runtime is
-shipped for markdown decks --- slides are server-rendered HTML.
-
-### Svelte for interactive decks
-
-Most decks are pure markdown and should use `.deck.md`. If you have a deck that
-needs Svelte interactivity --- custom components, widgets, that sort of thing
---- use `.deck.svelte` instead. You'll need `@astrojs/svelte`, `svelte`, and
-`reveal.js` as additional dependencies:
-
-```js
-import svelte from "@astrojs/svelte";
-import { astromotion, deckPreprocessor } from "astromotion";
-
-export default defineConfig({
-  integrations: [svelte({ preprocess: [deckPreprocessor()] }), astromotion()],
-});
-```
-
-The two paths work differently under the hood. `.deck.md` files are processed at
-build time by the Vite plugin and rendered as static HTML --- no JavaScript
-framework ships to the browser. `.deck.svelte` files go through the Svelte
-preprocessor and are loaded client-side via `client:only="svelte"`, which means
-the Svelte runtime is included in the bundle.
-
-In `.deck.svelte` files, `<script>` and `<style>` blocks are preserved and
-participate in Svelte's component lifecycle. You can import custom components in
-the script block. The preprocessor auto-generates the Reveal.js initialisation
-code, so you don't need to worry about that.
+The integration registers `@astrojs/mdx` with the custom remark plugins,
+injects the `/decks/[...slug]` catch-all route, and resolves your theme CSS.
+Slides are server-rendered HTML by default; interactive components opt in to
+client-side hydration per component via Astro's `client:*` directives.
 
 **Important:** deck pages must not use Astro's `<ClientRouter />` --- it
 conflicts with Reveal.js keyboard navigation.
 
 ## Writing slides
 
-Create `.deck.md` files in `src/decks/`:
+Create `.deck.mdx` files in `src/decks/`:
 
 ```
 src/decks/
-  my-talk.deck.md             -> /decks/my-talk/
+  my-talk.deck.mdx             -> /decks/my-talk/
   assets/
     photo.jpg
 ```
 
 Top-level files use the filename stem as the slug. Subdirectories also work ---
-a file named `slides.deck.md` maps to the folder root URL, and other names
+a file named `slides.deck.mdx` maps to the folder root URL, and other names
 become sub-paths:
 
 ```
 src/decks/
   my-series/
-    slides.deck.md            -> /decks/my-series/
-    bonus.deck.md             -> /decks/my-series/bonus/
+    slides.deck.mdx            -> /decks/my-series/
+    bonus.deck.mdx             -> /decks/my-series/bonus/
 ```
 
 ### Frontmatter
 
 Decks support YAML frontmatter with these fields:
 
-```markdown
+```mdx
 ---
 title: My Talk
 description: A talk about things
-author: Ben Swift
 image: /og-image.png
 ---
 ```
@@ -112,43 +84,53 @@ for the page `<title>` and Open Graph / Twitter Card meta tags.
 
 ### Slide syntax
 
-Slides are separated by `---` (thematic breaks). The Vite plugin converts each
-section into a Reveal.js `<section>` element at build time.
+Slides are separated by `---` (thematic breaks). Each section becomes a
+Reveal.js `<section>` element.
 
-```markdown
+### Minimal example
+
+````mdx
 ---
-title: My Talk
----
-
-# Title slide
-
-## Subtitle
-
+title: My Deck
 ---
 
-## Second slide
+import MyWidget from "../components/MyWidget.svelte";
 
-Regular markdown content --- paragraphs, lists, code blocks, images.
+# Hello
+
+![bg](./photo.jpg)
 
 ---
 
-<!-- _class: impact -->
+## Slide with widget
+
+<MyWidget client:visible prop="value" />
+
+---
+
+{/* _class: impact */}
 
 **Big statement slide**
-```
 
-### Metadata directives
+{/* notes: This is a speaker note. <em>HTML is supported.</em> */}
+````
 
-Borrowed from Marp syntax:
+### Directives
 
-- `<!-- _class: impact -->` --- set a CSS class on the slide (e.g. `impact`,
-  `banner`, `quote`, `centered`, or any custom class your theme defines)
-- `<!-- notes: Speaker notes here -->` --- presenter notes, visible in the
-  Reveal.js speaker view (press **S**)
+MDX does not support HTML comments. Directives use MDX expression comment
+syntax:
+
+- `{/* _class: name */}` --- set a CSS class on the enclosing slide (e.g.
+  `impact`, `banner`, `quote`, `centered`, or any custom class your theme
+  defines)
+- `{/* notes: ...HTML body... */}` --- presenter notes, visible in the
+  Reveal.js speaker view (press **S**). The content is rendered as HTML.
+- `{/* @include ./path.mdx */}` --- inline slides from another `.mdx` file
+  (see Include directives below)
 
 ### Background images
 
-Also Marp-inspired:
+Marp-inspired background image syntax:
 
 - `![bg](./assets/photo.jpg)` --- full-bleed background
 - `![bg contain](url)` / `![bg cover](url)` --- sizing
@@ -158,25 +140,12 @@ Also Marp-inspired:
   brightness, and saturate can be combined freely)
 
 Image paths must be relative to the deck file (e.g. `./assets/photo.jpg`).
-Absolute paths like `/images/...` are not resolved and will break on subpath
+Absolute paths like `/images/...` are not resolved and will 404 on subpath
 deployments.
-
-### Include directives
-
-You can inline markdown from another file with an include directive:
-
-```markdown
-<!-- @include ./shared-intro.md -->
-```
-
-Paths are relative to the current deck file. Included content participates in
-slide splitting --- thematic breaks inside the included file create new slides.
-This is handy for sharing common slides (acknowledgements, logos, boilerplate)
-across multiple decks.
 
 ### QR codes
 
-```markdown
+```mdx
 ![qr](https://example.com)
 ```
 
@@ -185,17 +154,44 @@ Generates an SVG QR code at build time, with CSS animations on the modules
 `prefers-reduced-motion`. The URL is displayed as a clickable link beneath
 the code.
 
-### Logo slides
+### Include directives
 
-```markdown
-<!-- _class: anu-logo -->
-<!-- _class: socy-logo -->
+Inline slides from another `.mdx` file:
+
+```mdx
+{/* @include ./shared-intro.mdx */}
 ```
 
-These generate full-slide animated SVG logos for the Australian National
-University and the ANU School of Cybernetics respectively. The gold rule lines
-grow in and the logo fades in, with the animations also respecting
-`prefers-reduced-motion`.
+Paths are relative to the current deck file. Included content participates in
+slide splitting --- thematic breaks inside the included file create new slides.
+Only `.mdx` files are supported; rename any `.md` partials to `.mdx` first.
+This is handy for sharing common slides (acknowledgements, logos, boilerplate)
+across multiple decks.
+
+### Components
+
+Import any component framework Astro supports (Svelte, React, Vue, Solid,
+etc.) at the top of the file and use it directly in slide content. Hydration is
+opt-in per component:
+
+```mdx
+import MyWidget from "../components/MyWidget.svelte";
+import AnotherWidget from "../components/AnotherWidget.jsx";
+
+---
+
+## Slide with components
+
+<MyWidget client:visible />
+<AnotherWidget client:load prop="value" />
+```
+
+Available `client:*` directives:
+
+- `client:load` --- hydrate immediately on page load
+- `client:visible` --- hydrate when the component enters the viewport
+- `client:only="svelte"` --- render only client-side (skip SSR entirely)
+- No directive --- render as static HTML, no JavaScript
 
 ### Code blocks
 
@@ -227,7 +223,7 @@ minimum you'll want:
 - **Slide section base styles** --- padding, text-align, font-weight under
   `.reveal .slides section`
 - **Slide classes** --- visual treatments for `banner`, `impact`, `quote`,
-  `centered` (the classes available via `<!-- _class: ... -->` directives)
+  `centered` (the classes available via `{/* _class: ... */}` directives)
 
 ### Structural classes reference
 
@@ -240,7 +236,6 @@ Your custom theme layers on top:
 | `.split-layout`  | Flex wrapper for split image/content slides       |
 | `.split-image`   | Image panel in split layout (width set inline)    |
 | `.split-content` | Content panel in split layout                     |
-| `.logo-svg`      | SVG container for logo slides                     |
 | `.qr-code`       | Container for generated QR code SVGs              |
 
 ### Sharing styles between your site and your decks
@@ -250,7 +245,7 @@ common CSS custom properties into a shared file (e.g. `src/styles/common.css`)
 and `@import` it from both your site's global stylesheet and your deck theme.
 
 Keep context-specific things separate --- the website and decks have
-fundamentally different rendering models (responsive layout vs a fixed 1280x720
+fundamentally different rendering models (responsive layout vs a fixed 1280×720
 viewport scaled to fill the screen), so root font size, layout tokens, and
 Reveal.js `--r-*` variables should stay in their respective files.
 
@@ -276,9 +271,8 @@ export default defineConfig({
 ```ts
 astromotion({
   theme: "./src/my-theme.css", // custom theme CSS path (default: built-in black theme)
-  injectRoutes: true, // inject /decks/[...slug] route (default: true)
-  codeTheme: "vitesse-dark", // Shiki theme name or object (default: "vitesse-dark")
-  preprocess: (md, filePath) => md, // transform markdown before slide processing (optional)
+  injectRoutes: true,          // inject /decks/[...slug] route (default: true)
+  codeTheme: "vitesse-dark",   // Shiki theme name or object (default: "vitesse-dark")
 });
 ```
 
@@ -294,10 +288,6 @@ astromotion({
 });
 ```
 
-The `preprocess` option accepts a function `(markdown: string, filePath: string) => string | Promise<string>` that transforms the raw deck markdown before any slide processing. The function receives the file content and its absolute path, and should return the transformed markdown. This runs before frontmatter parsing, include resolution, and slide splitting --- so your preprocessor sees the original source and can make arbitrary changes.
-
-Use cases include resolving custom directives, injecting content from external sources, or expanding shorthand syntax. The preprocessor is intentionally generic --- astromotion doesn't prescribe what transformations you apply.
-
 If you set `injectRoutes: false`, you'll need to create your own route pages.
 See `pages/[...slug].astro` in this package for the reference implementation.
 
@@ -305,7 +295,7 @@ See `pages/[...slug].astro` in this package for the reference implementation.
 
 The integration configures Reveal.js with these options:
 
-- **1280x720** slide dimensions, no margin
+- **1280×720** slide dimensions, no margin
 - **linear navigation** (no 2D grid) with no on-screen controls
 - **hash-based URLs** with 1-based indexing (`#/1`, `#/2`, etc.)
 - **no transitions** between slides
@@ -335,7 +325,7 @@ const decks = [];
 for (const entry of fs.readdirSync(decksDir, { withFileTypes: true })) {
   if (entry.isDirectory()) {
     for (const file of fs.readdirSync(path.join(decksDir, entry.name))) {
-      const match = file.match(/^(.+)\.deck\.md$/);
+      const match = file.match(/^(.+)\.deck\.mdx$/);
       if (!match) continue;
       const raw = fs.readFileSync(path.join(decksDir, entry.name, file), "utf-8");
       const { data } = parseDeckFrontmatter(raw, entry.name);
@@ -343,7 +333,7 @@ for (const entry of fs.readdirSync(decksDir, { withFileTypes: true })) {
       decks.push({ slug, title: data.title ?? slug, description: data.description });
     }
   } else if (entry.isFile()) {
-    const match = entry.name.match(/^(.+)\.deck\.md$/);
+    const match = entry.name.match(/^(.+)\.deck\.mdx$/);
     if (!match) continue;
     const raw = fs.readFileSync(path.join(decksDir, entry.name), "utf-8");
     const { data } = parseDeckFrontmatter(raw, match[1]);
@@ -391,12 +381,27 @@ heavy decks.
 The package exports:
 
 - **`astromotion(options?)`** --- the Astro integration (this is what you use)
-- **`deckPreprocessor(options?)`** --- Svelte preprocessor for `.deck.svelte`
-  files
+- **`deckRemarkPlugins`** --- the array of remark plugins in the correct order,
+  exported for use when you manage `@astrojs/mdx` yourself
 - **`parseDeckFrontmatter(raw, slug?)`** --- parse YAML frontmatter from a deck
   file (useful for listing pages)
-- **`deckPlugin(options?)`** --- the Vite plugin, exported for internal use by
-  the integration; you shouldn't need this directly
+
+## Migration from `.deck.md` / `.deck.svelte`
+
+1. Rename `*.deck.md` and `*.deck.svelte` to `*.deck.mdx`.
+2. For `.deck.svelte` files with a `<script lang="ts">` block, lift its
+   contents to top-level MDX `import` and `export const` statements and drop
+   the `<script>` wrapper.
+3. Convert directive syntax from HTML comments to MDX expression syntax:
+   - `<!-- @include ./path -->` → `{/* @include ./path.mdx */}`
+   - `<!-- _class: name -->` → `{/* _class: name */}`
+   - `<!-- notes: ... -->` → `{/* notes: ... */}`
+4. Rename any `.md` partial files used by `@include` to `.mdx`.
+5. Remove `@astrojs/svelte` and `deckPreprocessor` from your Astro config if
+   they were only there for deck support. Add `@astrojs/mdx` as a dependency
+   (the integration will register it automatically, but it must be installed).
+
+Background image syntax, QR images, and slide separators are unchanged.
 
 ## Licence
 

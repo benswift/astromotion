@@ -1,5 +1,33 @@
 # Changelog
 
+## 2026-05-05
+
+### Breaking: unified `.deck.mdx` format
+
+`.deck.md` and `.deck.svelte` paths are removed. Decks are now authored as
+`.deck.mdx` files processed by Astro's MDX integration with a set of custom
+remark plugins (lifted from the previous bespoke pipeline).
+
+**Why:** the previous split forced authors to choose between server-rendered
+markdown (`.deck.md`, no components) and client-only Svelte (`.deck.svelte`,
+full Svelte runtime, no SSR). The new format gives islands-style hydration:
+SSR by default, per-component opt-in to client-side hydration via Astro's
+`client:*` directives.
+
+**Migration:** Rename `*.deck.md` and `*.deck.svelte` → `*.deck.mdx`. For
+files that had a `<script lang="ts">` block, lift its contents to top-level
+MDX `import` and `export const` statements (drop the `<script>` wrapper).
+
+Convert directive syntax from HTML comments to MDX expression syntax:
+`<!-- @include ./path -->` → `{/* @include ./path.mdx */}`,
+`<!-- _class: name -->` → `{/* _class: name */}`,
+`<!-- notes: ... -->` → `{/* notes: ... */}`. The bg image syntax
+(`![bg ...](url)`), QR images (`![qr](url)`), and slide separators (`---`)
+are unchanged.
+
+`@astrojs/svelte` is no longer a peer dependency. `@astrojs/mdx` is now
+required.
+
 ## 2026-04-29
 
 ### Slides now render onto a fixed 1280×720 canvas

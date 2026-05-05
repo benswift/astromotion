@@ -1,7 +1,7 @@
 # astromotion
 
-Astro integration + Vite plugin for markdown-authored slide decks powered by
-Reveal.js. Consumed as a package by Astro sites --- not a standalone app.
+Astro integration for markdown-authored slide decks powered by Reveal.js.
+Consumed as a package by Astro sites --- not a standalone app.
 
 ## Commands
 
@@ -9,46 +9,70 @@ Reveal.js. Consumed as a package by Astro sites --- not a standalone app.
 
 ## Architecture
 
-The integration (`index.ts`) registers a Vite plugin, aliases theme CSS via a
-virtual module, exposes the `codeTheme` config via a second virtual module, and
-injects a catch-all deck route.
+The integration (`index.ts`) registers `@astrojs/mdx` with the six custom remark
+plugins, aliases theme CSS via a virtual module, and injects a catch-all deck
+route.
 
-### .deck.md (default path, no framework runtime)
+### .deck.mdx format
 
-The Vite plugin (`src/vite-plugin.ts`) claims `.deck.md` files with
-`enforce: "pre"` + `resolveId`/`load` hooks so it runs before Astro's built-in
-markdown pipeline. It parses markdown with remark/rehype, splits on `---` into
-slides, applies Shiki syntax highlighting and smartypants typography, and
-produces HTML `<section>` strings.
+Decks are authored as `.deck.mdx` files. Astro's MDX integration processes
+them through the standard remark/rehype pipeline, plus the six custom remark
+plugins (in `plugins/`). The result is an Astro component whose default export
+is the slide content.
 
-The catch-all route (`pages/[...slug].astro`) calls `processDeckMarkdown()` at
-build time in `getStaticPaths`, passes the HTML as a prop, and renders it into
-a `<div class="reveal"><div class="slides">` wrapper with a `<script>` that
-initialises Reveal.js directly.
+**Plugin order matters** (each runs in sequence on the remark AST):
 
-### .deck.svelte (Svelte opt-in, ships Svelte runtime)
+1. `remarkDeckIncludes` --- resolves `{/* @include ./path.mdx */}` directives
+   by splicing the included AST in-place (must run first so later plugins see
+   the full content)
+2. `remarkDeckSections` --- wraps content between `---` thematic breaks in
+   `<section>` elements
+3. `remarkDeckClasses` --- converts `{/* _class: name */}` expressions to
+   `class` attributes on the enclosing section
+4. `remarkDeckNotes` --- converts `{/* notes: ...HTML... */}` expressions to
+   `<div class="notes">` elements inside the section
+5. `remarkDeckQr` --- converts `![qr](url)` images to inline SVG QR codes
+6. `remarkDeckBg` --- converts `![bg ...](url)` images to background elements
+   and split layouts
 
-The Svelte preprocessor (`src/preprocessor.ts`) transforms `.deck.svelte` files
-into Svelte components with an `onMount` that calls `Reveal.initialize()` and
-a `destroy` cleanup. These render via `DeckLoader` with `client:only="svelte"`.
+Each plugin gates itself with `if (!file.path?.endsWith('.deck.mdx')) return`
+so it silently ignores non-deck MDX files.
 
-`<script>` and `<style>` blocks are preserved. The preprocessor extracts them,
-merges in Reveal.js init code, and re-emits the script block with the user's
-content.
+### Components
 
-### Shared markdown pipeline
+Any framework Astro supports (Svelte, React, Vue, Solid, etc.) can be imported
+at the top of a `.deck.mdx` file and used directly in slide content. Hydration
+is opt-in per component via Astro's `client:*` directives (`client:load`,
+`client:visible`, `client:only`, etc.). Slides without interactive components
+render as zero-JS server-rendered HTML.
 
-Both paths share a unified remark/rehype pipeline plus custom transforms for
-includes, bg images, QR codes, logo slides, metadata directives, and
-smartypants.
+### Catch-all route
+
+`pages/[...slug].astro` uses `import.meta.glob({ eager: true })` to enumerate
+all `*.deck.mdx` files at build time and generate one static path per deck.
+Each path receives the deck's default export (`Content`) and frontmatter as
+props. Reveal.js is initialised inline in the route's `<script>` tag.
+
+### Directive syntax
+
+MDX does not support HTML comments (`<!-- -->`). Directives use MDX expression
+comment syntax instead:
+
+| Directive         | Syntax                             |
+| ----------------- | ---------------------------------- |
+| Include           | `{/* @include ./path.mdx */}`      |
+| Slide class       | `{/* _class: name */}`             |
+| Speaker notes     | `{/* notes: ...HTML body... */}`   |
+
+Background images (`![bg ...](url)`), QR images (`![qr](url)`), and slide
+separators (`---`) are unchanged from the previous format.
 
 ## Image paths
 
 Deck images must use relative paths (e.g. `./assets/photo.jpg`). Relative paths
-are resolved via Vite imports in the plugin path and via `resolveImageUrl` (which
-prepends `config.base`) in the static HTML path. Absolute paths (`/images/...`)
-are passed through unmodified and will 404 on subpath deployments --- this is
-intentional to fail early rather than mask content bugs.
+are resolved at build time via Astro's asset pipeline. Absolute paths
+(`/images/...`) are passed through unmodified and will 404 on subpath
+deployments --- this is intentional to fail early rather than mask content bugs.
 
 ## Key design decisions
 
@@ -62,9 +86,9 @@ intentional to fail early rather than mask content bugs.
   sections (Reveal sets `display` inline on the active section, so the config
   option is what propagates `grid` rather than the default `block`).
 - Speaker notes use `<div class="notes">` not `<aside class="notes">` to avoid
-  a11y landmark violations in consuming projects
+  a11y landmark violations in consuming projects.
 - Deck pages must not use Astro's `<ClientRouter />` (conflicts with Reveal.js
-  keyboard navigation)
+  keyboard navigation).
 
 ## Theming
 
