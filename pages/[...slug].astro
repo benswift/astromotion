@@ -1,105 +1,55 @@
 ---
 import DeckLayout from "../components/DeckLayout.astro";
-import DeckLoader from "../components/DeckLoader.svelte";
-import { parseDeckFrontmatter } from "../src/meta.ts";
-import { processDeckMarkdown } from "../src/vite-plugin.ts";
-import codeTheme from "virtual:astromotion/code-theme";
-import preprocess from "virtual:astromotion/preprocess";
-import fs from "node:fs";
-import path from "node:path";
 
-export async function getStaticPaths() {
-  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-  const decksDir = path.resolve("src/decks");
-  const DECK_MD_RE = /^(.+)\.deck\.(md|svx)$/;
-  const DECK_SVELTE_RE = /^(.+)\.deck\.svelte$/;
-  const results: Array<{ params: { slug: string }; props: Record<string, unknown> }> = [];
-
-  for (const entry of fs.readdirSync(decksDir, { withFileTypes: true })) {
-    if (entry.isDirectory()) {
-      const dirPath = path.join(decksDir, entry.name);
-
-      for (const file of fs.readdirSync(dirPath)) {
-        const mdMatch = file.match(DECK_MD_RE);
-        const svelteMatch = file.match(DECK_SVELTE_RE);
-        const match = mdMatch || svelteMatch;
-        if (!match) continue;
-
-        const name = match[1];
-        const isSvelte = !!svelteMatch;
-        const raw = fs.readFileSync(path.join(dirPath, file), "utf-8");
-        const { data } = parseDeckFrontmatter(raw, entry.name);
-        const slug = name === "slides" ? entry.name : `${entry.name}/${name}`;
-        const deckPath = `/src/decks/${entry.name}/${file}`;
-
-        let slidesHtml = "";
-        if (!isSvelte) {
-          slidesHtml = await processDeckMarkdown(raw, path.join(dirPath, file), { codeTheme, preprocess: preprocess || undefined, base });
-        }
-
-        results.push({
-          params: { slug },
-          props: { title: data.title ?? entry.name, description: data.description, image: data.image, deckPath, isSvelte, slidesHtml },
-        });
-      }
-    } else if (entry.isFile()) {
-      const mdMatch = entry.name.match(DECK_MD_RE);
-      const svelteMatch = entry.name.match(DECK_SVELTE_RE);
-      const match = mdMatch || svelteMatch;
-      if (!match) continue;
-
-      const name = match[1];
-      const isSvelte = !!svelteMatch;
-      const raw = fs.readFileSync(path.join(decksDir, entry.name), "utf-8");
-      const { data } = parseDeckFrontmatter(raw, name);
-      const deckPath = `/src/decks/${entry.name}`;
-
-      let slidesHtml = "";
-      if (!isSvelte) {
-        slidesHtml = await processDeckMarkdown(raw, path.join(decksDir, entry.name), { codeTheme, preprocess: preprocess || undefined, base });
-      }
-
-      results.push({
-        params: { slug: name },
-        props: { title: data.title ?? name, description: data.description, image: data.image, deckPath, isSvelte, slidesHtml },
-      });
-    }
-  }
-
-  return results;
+interface DeckModule {
+  default: any;
+  frontmatter: { title?: string; description?: string; image?: string; [key: string]: any };
 }
 
-const { title, description, image, deckPath, isSvelte, slidesHtml } = Astro.props;
+export async function getStaticPaths() {
+  const modules = import.meta.glob<DeckModule>("/src/decks/**/*.deck.mdx", { eager: true });
+  return Object.entries(modules).map(([filePath, mod]) => {
+    const match = filePath.match(/\/src\/decks\/(.+)\.deck\.mdx$/);
+    if (!match) throw new Error(`Unexpected deck path: ${filePath}`);
+    const name = match[1];
+    const slug = name.endsWith("/slides") ? name.slice(0, -"/slides".length) : name;
+    return {
+      params: { slug },
+      props: { Content: mod.default, frontmatter: mod.frontmatter ?? {} },
+    };
+  });
+}
+
+const { Content, frontmatter } = Astro.props;
 ---
 
-<DeckLayout title={title} description={description} image={image}>
-  {isSvelte ? (
-    <DeckLoader deckPath={deckPath} client:only="svelte" />
-  ) : (
-    <div class="reveal" role="main">
-      <div class="slides" set:html={slidesHtml} />
+<DeckLayout
+  title={frontmatter.title ?? "Deck"}
+  description={frontmatter.description}
+  image={frontmatter.image}
+>
+  <div class="reveal" role="main">
+    <div class="slides">
+      <Content />
     </div>
-  )}
+  </div>
 </DeckLayout>
 
-{!isSvelte && (
-  <script>
-    import Reveal from "reveal.js";
-
-    const deck = new Reveal({
-      width: 1280,
-      height: 720,
-      margin: 0,
-      hash: true,
-      hashOneBasedIndex: true,
-      controls: false,
-      navigationMode: "linear",
-      transition: "none",
-      display: "grid",
-      center: true,
-      viewDistance: 10,
-      maxScale: 4,
-    });
-    deck.initialize();
-  </script>
-)}
+<script>
+  import Reveal from "reveal.js";
+  const deck = new Reveal({
+    width: 1280,
+    height: 720,
+    margin: 0,
+    hash: true,
+    hashOneBasedIndex: true,
+    controls: false,
+    navigationMode: "linear",
+    transition: "none",
+    display: "grid",
+    center: true,
+    viewDistance: 10,
+    maxScale: 4,
+  });
+  deck.initialize();
+</script>
