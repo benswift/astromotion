@@ -2,10 +2,11 @@ import { describe, it, expect } from "vitest";
 import type { Root } from "mdast";
 import { unified } from "unified";
 import remarkParse from "remark-parse";
+import remarkMdx from "remark-mdx";
 import { deckRemarkPlugins } from "../plugins/index.ts";
 
 async function runPipeline(input: string, filePath: string): Promise<Root> {
-  const processor = unified().use(remarkParse);
+  const processor = unified().use(remarkParse).use(remarkMdx);
   for (const plugin of deckRemarkPlugins) processor.use(plugin);
   const tree = processor.parse(input);
   await processor.run(tree, { path: filePath });
@@ -22,7 +23,7 @@ function findChild(parent: any, predicate: (n: any) => boolean): any {
 
 describe("deck plugin pipeline", () => {
   it("turns a multi-slide deck with all directives into expected AST", async () => {
-    const input = `<!-- _class: banner -->
+    const input = `{/* _class: banner */}
 
 # Title
 
@@ -30,7 +31,7 @@ describe("deck plugin pipeline", () => {
 
 ---
 
-<!-- _class: impact -->
+{/* _class: impact */}
 
 **activity**
 

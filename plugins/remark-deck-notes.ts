@@ -1,5 +1,5 @@
-import type { Root, RootContent, Html } from "mdast";
-import { parseNotesDirective } from "../src/parse-helpers.ts";
+import type { Root, RootContent } from "mdast";
+import { parseNotesDirectiveMdx } from "../src/parse-helpers.ts";
 
 export function remarkDeckNotes() {
   return (tree: Root, file: { path?: string }) => {
@@ -11,8 +11,8 @@ export function remarkDeckNotes() {
       const newChildren: RootContent[] = [];
       let notesContent: string | null = null;
       for (const child of sec.children as RootContent[]) {
-        if (child.type === "html") {
-          const notes = parseNotesDirective((child as Html).value);
+        if ((child as any).type === "mdxFlowExpression") {
+          const notes = parseNotesDirectiveMdx((child as any).value);
           if (notes !== null) {
             notesContent = notes;
             continue;
@@ -25,7 +25,7 @@ export function remarkDeckNotes() {
           type: "mdxJsxFlowElement",
           name: "div",
           attributes: [{ type: "mdxJsxAttribute", name: "class", value: "notes" }],
-          children: [{ type: "html", value: notesContent } as Html],
+          children: [{ type: "html", value: notesContent } as any],
         } as any);
       }
       sec.children = newChildren;

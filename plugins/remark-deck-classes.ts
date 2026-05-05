@@ -1,5 +1,5 @@
-import type { Root, RootContent, Html } from "mdast";
-import { parseClassDirective } from "../src/parse-helpers.ts";
+import type { Root, RootContent } from "mdast";
+import { parseClassDirectiveMdx } from "../src/parse-helpers.ts";
 
 export function remarkDeckClasses() {
   return (tree: Root, file: { path?: string }) => {
@@ -11,8 +11,8 @@ export function remarkDeckClasses() {
       const newChildren: RootContent[] = [];
       let className: string | null = null;
       for (const child of sec.children as RootContent[]) {
-        if (child.type === "html") {
-          const cls = parseClassDirective((child as Html).value);
+        if ((child as any).type === "mdxFlowExpression") {
+          const cls = parseClassDirectiveMdx((child as any).value);
           if (cls !== null) {
             className = cls;
             continue;

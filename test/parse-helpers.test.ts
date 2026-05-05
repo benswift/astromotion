@@ -5,6 +5,10 @@ import {
   parseClassDirective,
   parseNotesDirective,
   parseIncludeDirective,
+  parseMdxFlowExpression,
+  parseClassDirectiveMdx,
+  parseNotesDirectiveMdx,
+  parseIncludeDirectiveMdx,
   isHtmlTagStart,
   extractScriptContent,
   extractFrontmatter,
@@ -344,5 +348,117 @@ describe("findRelativeImgSrcs", () => {
       '<img data-src="./photo.jpg" src="https://cdn.example.com/img.jpg">',
     );
     expect(result).toHaveLength(0);
+  });
+});
+
+describe("parseMdxFlowExpression", () => {
+  it("extracts body from a block comment", () => {
+    expect(parseMdxFlowExpression("/* hello */")).toBe("hello");
+  });
+
+  it("trims internal whitespace", () => {
+    expect(parseMdxFlowExpression("/*  spaced  */")).toBe("spaced");
+  });
+
+  it("handles surrounding whitespace on the string", () => {
+    expect(parseMdxFlowExpression("  /* trimmed */  ")).toBe("trimmed");
+  });
+
+  it("returns null for non-comment value", () => {
+    expect(parseMdxFlowExpression("just text")).toBeNull();
+  });
+
+  it("returns null for missing closing", () => {
+    expect(parseMdxFlowExpression("/* unclosed")).toBeNull();
+  });
+
+  it("returns null for empty string", () => {
+    expect(parseMdxFlowExpression("")).toBeNull();
+  });
+
+  it("handles comment with only whitespace body", () => {
+    expect(parseMdxFlowExpression("/*   */")).toBe("");
+  });
+
+  it("preserves colons and special characters in body", () => {
+    expect(parseMdxFlowExpression("/* key: value */")).toBe("key: value");
+  });
+
+  it("handles multiline body", () => {
+    expect(parseMdxFlowExpression("/* line one\nline two */")).toBe("line one\nline two");
+  });
+});
+
+describe("parseClassDirectiveMdx", () => {
+  it("extracts class name", () => {
+    expect(parseClassDirectiveMdx("/* _class: banner */")).toBe("banner");
+  });
+
+  it("extracts multiple class names", () => {
+    expect(parseClassDirectiveMdx("/* _class: banner centered */")).toBe("banner centered");
+  });
+
+  it("returns null for non-class comments", () => {
+    expect(parseClassDirectiveMdx("/* notes: hello */")).toBeNull();
+  });
+
+  it("handles extra whitespace", () => {
+    expect(parseClassDirectiveMdx("/*  _class:  impact  */")).toBe("impact");
+  });
+
+  it("returns null for empty value after directive", () => {
+    expect(parseClassDirectiveMdx("/* _class: */")).toBeNull();
+  });
+
+  it("returns null for non-comment string", () => {
+    expect(parseClassDirectiveMdx("_class: banner")).toBeNull();
+  });
+});
+
+describe("parseNotesDirectiveMdx", () => {
+  it("extracts notes content", () => {
+    expect(parseNotesDirectiveMdx("/* notes: Remember this */")).toBe("Remember this");
+  });
+
+  it("returns null for non-notes comments", () => {
+    expect(parseNotesDirectiveMdx("/* _class: banner */")).toBeNull();
+  });
+
+  it("preserves internal content", () => {
+    expect(parseNotesDirectiveMdx("/* notes: line one, line two */")).toBe("line one, line two");
+  });
+
+  it("handles multiline notes content", () => {
+    expect(parseNotesDirectiveMdx("/* notes:\nspeaker note text\n*/")).toBe(
+      "speaker note text",
+    );
+  });
+});
+
+describe("parseIncludeDirectiveMdx", () => {
+  it("extracts file path", () => {
+    expect(parseIncludeDirectiveMdx("/* @include slides/intro.mdx */")).toBe("slides/intro.mdx");
+  });
+
+  it("returns null for non-include comments", () => {
+    expect(parseIncludeDirectiveMdx("/* _class: banner */")).toBeNull();
+  });
+
+  it("returns null for non-comment value", () => {
+    expect(parseIncludeDirectiveMdx("@include file.mdx")).toBeNull();
+  });
+
+  it("returns null for empty path", () => {
+    expect(parseIncludeDirectiveMdx("/* @include  */")).toBeNull();
+  });
+
+  it("extracts only the first token as path", () => {
+    expect(parseIncludeDirectiveMdx("/* @include file.mdx extra */")).toBe("file.mdx");
+  });
+
+  it("handles relative paths", () => {
+    expect(parseIncludeDirectiveMdx("/* @include ../shared/topic.mdx */")).toBe(
+      "../shared/topic.mdx",
+    );
   });
 });

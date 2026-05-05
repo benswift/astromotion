@@ -36,6 +36,37 @@ export function parseIncludeDirective(html: string): string | null {
   return path || null;
 }
 
+export function parseMdxFlowExpression(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("/*") || !trimmed.endsWith("*/")) return null;
+  return trimmed.slice(2, -2).trim();
+}
+
+function parseMdxDirective(value: string, directive: string): string | null {
+  const body = parseMdxFlowExpression(value);
+  if (!body) return null;
+  const prefix = directive + ":";
+  if (!body.startsWith(prefix)) return null;
+  const v = body.slice(prefix.length).trim();
+  return v || null;
+}
+
+export function parseClassDirectiveMdx(value: string): string | null {
+  return parseMdxDirective(value, "_class");
+}
+
+export function parseNotesDirectiveMdx(value: string): string | null {
+  return parseMdxDirective(value, "notes");
+}
+
+export function parseIncludeDirectiveMdx(value: string): string | null {
+  const body = parseMdxFlowExpression(value);
+  if (!body) return null;
+  if (!body.startsWith("@include ")) return null;
+  const path = body.slice("@include ".length).trim().split(/\s/)[0];
+  return path || null;
+}
+
 export function isHtmlTagStart(html: string, tagName: string): boolean {
   const lower = html.trimStart().toLowerCase();
   if (!lower.startsWith(`<${tagName}`)) return false;
