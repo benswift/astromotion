@@ -4,6 +4,14 @@ import remarkParse from "remark-parse";
 import { remarkDeckSections } from "../plugins/remark-deck-sections.ts";
 import { remarkDeckBg } from "../plugins/remark-deck-bg.ts";
 
+function classOf(node: any): string | undefined {
+  return node?.attributes?.find((a: any) => a.name === "class")?.value;
+}
+
+function styleOf(node: any): string | undefined {
+  return node?.attributes?.find((a: any) => a.name === "style")?.value;
+}
+
 describe("remarkDeckBg", () => {
   it("prepends a .slide-bg div for full-bleed bg images", async () => {
     const input = "# Title\n\n![bg](./photo.jpg)\n\nbody\n";
@@ -14,9 +22,10 @@ describe("remarkDeckBg", () => {
       .run(tree, { path: "test.deck.mdx" });
     const section = tree.children[0] as any;
     const first = section.children[0];
-    expect(first.type).toBe("html");
-    expect(first.value).toContain('class="slide-bg"');
-    expect(first.value).toContain("./photo.jpg");
+    expect(first.type).toBe("mdxJsxFlowElement");
+    expect(first.name).toBe("div");
+    expect(classOf(first)).toBe("slide-bg");
+    expect(styleOf(first)).toContain("./photo.jpg");
     const imageParas = section.children.filter(
       (c: any) =>
         c.type === "paragraph" && c.children?.[0]?.type === "image",
@@ -32,12 +41,14 @@ describe("remarkDeckBg", () => {
       .use(remarkDeckBg)
       .run(tree, { path: "test.deck.mdx" });
     const section = tree.children[0] as any;
-    const wrapper = section.children[0];
-    expect(wrapper.type).toBe("html");
-    expect(wrapper.value).toContain('class="split-layout"');
-    expect(wrapper.value).toContain('class="split-content"');
-    expect(wrapper.value).toContain('class="split-image"');
-    expect(wrapper.value).toContain("width: 40%");
+    const layout = section.children[0];
+    expect(layout.type).toBe("mdxJsxFlowElement");
+    expect(classOf(layout)).toBe("split-layout");
+    // For right: content first, image second
+    const [content, image] = layout.children;
+    expect(classOf(content)).toBe("split-content");
+    expect(classOf(image)).toBe("split-image");
+    expect(styleOf(image)).toContain("width: 40%");
   });
 
   it("applies filter modifiers", async () => {
@@ -49,6 +60,6 @@ describe("remarkDeckBg", () => {
       .run(tree, { path: "test.deck.mdx" });
     const section = tree.children[0] as any;
     const first = section.children[0];
-    expect(first.value).toContain("filter: brightness(0.5) blur(2px)");
+    expect(styleOf(first)).toContain("filter: brightness(0.5) blur(2px)");
   });
 });
