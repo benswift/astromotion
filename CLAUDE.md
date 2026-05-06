@@ -104,3 +104,12 @@ win.
 
 The consuming project provides visual theme CSS via the integration's `theme`
 option.
+
+## Fonts (Astro fonts API)
+
+`fontVariables: string[]` lets consumers wire decks into Astro's top-level
+`fonts` config without editing astromotion components. Each entry is a
+`cssVariable` name; astromotion exposes the array as `virtual:astromotion/fonts`
+and `DeckHead.astro` renders `<Font cssVariable={v} preload />` for each.
+Fonts must still be declared in `astro.config`'s `fonts` array --- this option
+is only the bridge between that config and the deck `<head>`.

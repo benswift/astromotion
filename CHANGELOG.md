@@ -1,5 +1,39 @@
 # Changelog
 
+## 2026-05-06
+
+### `fontVariables` option for the Astro 6 fonts API
+
+`astromotion()` now accepts a `fontVariables: string[]` option whose entries
+are `cssVariable` names from Astro's top-level `fonts` config. For each
+variable, astromotion injects `<Font cssVariable={v} preload />` into the
+deck `<head>` --- giving decks self-hosted fonts with automatic preloading,
+subsetting, and `font-fallback` metrics.
+
+```ts
+import { fontProviders } from "astro/config";
+
+defineConfig({
+  fonts: [
+    {
+      provider: fontProviders.google(),
+      name: "Public Sans",
+      cssVariable: "--font-public-sans",
+    },
+  ],
+  integrations: [
+    astromotion({
+      theme: "./src/decks/theme.css",
+      fontVariables: ["--font-public-sans"],
+    }),
+  ],
+});
+```
+
+Consuming themes can reference the variable directly
+(`var(--font-public-sans, "Public Sans")`) or rely on the `@font-face`
+rule emitted by `<Font>` to register the family by its plain name.
+
 ## 2026-05-05
 
 ### Breaking: unified `.deck.mdx` format

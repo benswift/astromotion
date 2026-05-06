@@ -1,4 +1,8 @@
 ---
+/// <reference path="../virtual.d.ts" />
+import { Font } from "astro:assets";
+import { fontVariables } from "virtual:astromotion/fonts";
+
 interface Props {
   title: string;
   description?: string;
@@ -10,6 +14,8 @@ const base = Astro.site ?? Astro.url;
 const canonicalUrl = new URL(Astro.url.pathname, base);
 const imageUrl = new URL(image, base);
 ---
+
+{fontVariables.map((cssVariable) => <Font cssVariable={cssVariable} preload />)}
 
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />

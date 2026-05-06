@@ -12,6 +12,14 @@ export interface AstromotionOptions {
   theme?: string;
   injectRoutes?: boolean;
   codeTheme?: ShikiConfig["theme"];
+  /**
+   * `cssVariable` names registered via Astro's top-level `fonts` config.
+   * For each variable, astromotion injects `<Font cssVariable={v} preload />`
+   * into the deck `<head>` so deck pages get self-hosted fonts with
+   * automatic preloading. The fonts themselves must be declared in
+   * `astro.config`'s `fonts` array.
+   */
+  fontVariables?: string[];
 }
 
 export function astromotion(options: AstromotionOptions = {}): AstroIntegration {
@@ -19,6 +27,7 @@ export function astromotion(options: AstromotionOptions = {}): AstroIntegration 
   const themePath = options.theme
     ? resolve(options.theme)
     : resolve(__dirname, "theme/default.css");
+  const fontVariables = options.fontVariables ?? [];
 
   let projectRoot = "";
 
@@ -42,6 +51,9 @@ export function astromotion(options: AstromotionOptions = {}): AstroIntegration 
           });
         }
 
+        const fontsModuleId = "virtual:astromotion/fonts";
+        const resolvedFontsModuleId = "\0" + fontsModuleId;
+
         updateConfig({
           vite: {
             resolve: {
@@ -49,6 +61,21 @@ export function astromotion(options: AstromotionOptions = {}): AstroIntegration 
                 "virtual:astromotion/theme": themePath,
               },
             },
+            plugins: [
+              {
+                name: "astromotion:virtual-fonts",
+                resolveId(id: string) {
+                  if (id === fontsModuleId) return resolvedFontsModuleId;
+                  return null;
+                },
+                load(id: string) {
+                  if (id === resolvedFontsModuleId) {
+                    return `export const fontVariables = ${JSON.stringify(fontVariables)};\n`;
+                  }
+                  return null;
+                },
+              },
+            ],
           },
         });
 
