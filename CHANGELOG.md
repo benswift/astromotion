@@ -2,14 +2,20 @@
 
 ## 2026-05-08
 
-### HMR for `@include` partials
+### Track `@include` partials as Vite watch dependencies
 
-Editing a partial referenced via `{/* @include ./path.mdx */}` now triggers
-HMR without touching the parent `.deck.mdx`. A new Vite plugin
-(`astromotion:watch-includes`) scans each `.deck.mdx` source on transform,
-walks nested includes up to `MAX_DEPTH = 10`, and registers each resolved
-file via `this.addWatchFile`. Production builds are unaffected --- this is
-purely a dev-server ergonomics change.
+A new dev-only Vite plugin (`astromotion:watch-includes`) scans each
+`.deck.mdx` source on transform, walks nested includes up to
+`MAX_DEPTH = 10`, registers each resolved partial with Vite's file watcher,
+and sends a `full-reload` over the dev WebSocket when a tracked partial
+changes. Production builds are unaffected --- this is purely a dev-server
+ergonomics change.
+
+Note: in environments where Astro's MDX dev pipeline caches rendered deck
+output, a content refresh may still require a manual server restart. The
+watch-file registration and reload signal are correct; downstream
+effectiveness depends on how Astro invalidates its module/page caches in
+your version.
 
 ## 2026-05-06
 
