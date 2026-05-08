@@ -4,6 +4,7 @@ import { copyFileSync, mkdirSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { collectDeckAssets } from "./src/asset-collector.ts";
+import { viteDeckWatchIncludes } from "./src/vite-plugin-watch-includes.ts";
 import { deckRemarkPlugins } from "./plugins/index.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -62,6 +63,7 @@ export function astromotion(options: AstromotionOptions = {}): AstroIntegration 
               },
             },
             plugins: [
+              viteDeckWatchIncludes(),
               {
                 name: "astromotion:virtual-fonts",
                 resolveId(id: string) {

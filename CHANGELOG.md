@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-05-08
+
+### HMR for `@include` partials
+
+Editing a partial referenced via `{/* @include ./path.mdx */}` now triggers
+HMR without touching the parent `.deck.mdx`. A new Vite plugin
+(`astromotion:watch-includes`) scans each `.deck.mdx` source on transform,
+walks nested includes up to `MAX_DEPTH = 10`, and registers each resolved
+file via `this.addWatchFile`. Production builds are unaffected --- this is
+purely a dev-server ergonomics change.
+
 ## 2026-05-06
 
 ### `fontVariables` option for the Astro 6 fonts API
