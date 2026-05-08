@@ -1,8 +1,12 @@
 import { describe, it, expect } from "vitest";
 import type { Root } from "mdast";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkMdx from "remark-mdx";
+import remarkSmartypants from "remark-smartypants";
 import { deckRemarkPlugins } from "../plugins/index.ts";
 
 async function runPipeline(input: string, filePath: string): Promise<Root> {
@@ -10,6 +14,16 @@ async function runPipeline(input: string, filePath: string): Promise<Root> {
   const tree = processor.parse(input);
   await processor.run(tree, { path: filePath });
   return tree as Root;
+}
+
+function collectText(tree: Root): string[] {
+  const out: string[] = [];
+  function walk(node: any): void {
+    if (node?.type === "text" && typeof node.value === "string") out.push(node.value);
+    if (Array.isArray(node?.children)) for (const c of node.children) walk(c);
+  }
+  walk(tree);
+  return out;
 }
 
 function classOf(node: any): string | undefined {
@@ -72,5 +86,32 @@ body
     );
     expect(splitImage).toBeDefined();
     expect(splitContent).toBeDefined();
+  });
+
+  it("applies oldschool smartypants to included content even when Astro registers smartypants first", async () => {
+    // Reproduces the bug where unified deduplicates remark-smartypants by
+    // reference: when @astrojs/mdx registers it ahead of user plugins, a
+    // second .use(remarkSmartypants, ...) just merges options into the first
+    // registration and runs before remarkDeckIncludes splices in @include
+    // content -- so prose dashes inside includes never become em dashes.
+    const dir = mkdtempSync(join(tmpdir(), "astromotion-smarty-"));
+    writeFileSync(join(dir, "partial.mdx"), "that's it---the spread is your model\n");
+    const input = `intro---one
+
+---
+
+{/* @include ./partial.mdx */}
+`;
+    const processor = unified()
+      .use(remarkParse)
+      .use(remarkMdx)
+      .use(remarkSmartypants) // simulate @astrojs/mdx default
+      .use(deckRemarkPlugins);
+    const tree = processor.parse(input) as Root;
+    await processor.run(tree, { path: join(dir, "deck.deck.mdx") });
+    const texts = collectText(tree);
+    expect(texts.some((t) => t.includes("---"))).toBe(false);
+    expect(texts.some((t) => t.includes("intro—one"))).toBe(true);
+    expect(texts.some((t) => t.includes("that’s it—the spread"))).toBe(true);
   });
 });
