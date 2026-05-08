@@ -97,4 +97,23 @@ parent's transform registers the partial as a watch file.
 - [x] #4 Regression test added covering the watch-file registration
 - [x] #5 CHANGELOG entry added
 - [ ] #6 Manual verification in llms-unplugged after upstream publish: edit cutouts-sycophancy.mdx, see HMR fire
+
+## Verification findings (2026-05-08)
+
+Plugin works as designed: registers all 11 cutouts-3h partials via
+`server.watcher.add`, fires `handleHotUpdate` on partial edits, and sends a
+`full-reload` over the dev WebSocket. Confirmed via debug logging in the
+llms-unplugged dev server.
+
+However, **even direct edits to a parent `.deck.mdx` file are not picked up
+by the running dev server in this Astro 6.3.1 + @astrojs/mdx 5.0.4 setup**.
+After editing the parent, the server keeps returning the rendered output
+captured at startup (verified via `curl` and a controlled browser session).
+A server restart is required to refresh.
+
+This means AC #1 and #6 cannot be verified end-to-end with the current
+upstream tooling --- the upstream caching issue masks any effect of the
+watch-file registration. Filed against a future upstream Astro/MDX fix; the
+plumbing in this task is correct and will start working as soon as the
+underlying invalidation lands.
 <!-- AC:END -->
