@@ -2,6 +2,13 @@
 
 ## 2026-05-09
 
+### Refresh dependencies
+
+Bumped all dependencies to latest, notably `reveal.js` 5.2 → 6.0 (matches what
+consumers like llms-unplugged were already pinning) and `@shikijs/rehype` 3 →
+4. Also added the previously missing `remark-smartypants` direct dep that the
+plugin pipeline test was importing.
+
 ### Disable Reveal.js scroll view on narrow viewports
 
 Reveal 6 ships `scrollActivationWidth: 435`, which silently switches decks
