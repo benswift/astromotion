@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-05-09
+
+### Disable Reveal.js scroll view on narrow viewports
+
+Reveal 6 ships `scrollActivationWidth: 435`, which silently switches decks
+into a vertical-scroll layout (slides stacked at near-1:1, no scaling) on
+viewports ≤435px wide. That broke the assumed invariant that decks always
+render onto the fixed 1280×720 canvas scaled to fit. The deck route now
+sets `scrollActivationWidth: null`, so portrait mobile viewports get the
+same scaled 16:9 layout as desktop --- just smaller.
+
 ## 2026-05-08
 
 ### Track `@include` partials as Vite watch dependencies
