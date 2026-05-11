@@ -6,6 +6,9 @@ Consumed as a package by Astro sites --- not a standalone app.
 ## Commands
 
 - `pnpm test` --- vitest
+- `scripts/release.sh <patch|minor|major|x.y.z> [reason]` --- bump version,
+  commit, annotated-tag `vX.Y.Z`, push. Refuses if dirty / off main / out of
+  sync. See the anu-theme-sync skill for when to release.
 
 ## Architecture
 
