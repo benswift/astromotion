@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-05-12
+
+### `@include` supports bare module specifiers
+
+`{/* @include ... */}` now accepts bare module specifiers in addition to
+relative/absolute paths --- e.g.
+`{/* @include astro-theme-anu/partials/foo.mdx */}` goes through Node's
+package resolution starting from the requesting deck file. The watch plugin
+follows the same rule, so HMR still wires up hot-reload on partial edits.
+Existing relative paths (`./`, `../`, `/`) behave exactly as before.
+
 ## 2026-05-09
 
 ### Refresh dependencies

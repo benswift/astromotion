@@ -50,4 +50,16 @@ describe("remarkDeckIncludes", () => {
         .run(tree, { path: path.join(__dirname, "main.deck.mdx") }),
     ).rejects.toThrow("@include only supports .mdx files");
   });
+
+  it("resolves bare module specifiers via Node module resolution", async () => {
+    const input = "{/* @include @fake/partials/greeting.mdx */}\n";
+    const tree = unified().use(remarkParse).use(remarkMdx).parse(input);
+    await unified()
+      .use(remarkDeckIncludes)
+      .run(tree, { path: path.join(__dirname, "fixtures", "wrapper.deck.mdx") });
+    const headings = tree.children.filter((n: any) => n.type === "heading");
+    expect(headings.map((h: any) => h.children[0].value)).toEqual([
+      "Greeting from node_modules",
+    ]);
+  });
 });

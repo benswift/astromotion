@@ -1,17 +1,21 @@
 import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { parseIncludeDirectiveMdx } from "./parse-helpers.ts";
+import { parseIncludeDirectiveMdx, resolveIncludePath } from "./parse-helpers.ts";
 
 const MAX_DEPTH = 10;
 const FLOW_EXPR_RE = /\{\s*(\/\*[\s\S]*?\*\/)\s*\}/g;
 
-function walk(source: string, dir: string, visited: Set<string>, depth: number): void {
+function walk(source: string, fromFile: string, visited: Set<string>, depth: number): void {
   if (depth > MAX_DEPTH) return;
   for (const match of source.matchAll(FLOW_EXPR_RE)) {
     const includePath = parseIncludeDirectiveMdx(match[1]!);
     if (!includePath) continue;
     if (!includePath.endsWith(".mdx")) continue;
-    const absPath = resolve(dir, includePath);
+    let absPath: string;
+    try {
+      absPath = resolveIncludePath(includePath, fromFile);
+    } catch {
+      continue;
+    }
     if (visited.has(absPath)) continue;
     visited.add(absPath);
     let content: string;
@@ -20,13 +24,13 @@ function walk(source: string, dir: string, visited: Set<string>, depth: number):
     } catch {
       continue;
     }
-    walk(content, dirname(absPath), visited, depth + 1);
+    walk(content, absPath, visited, depth + 1);
   }
 }
 
-export function collectIncludePaths(source: string, dir: string): string[] {
+export function collectIncludePaths(source: string, fromFile: string): string[] {
   const visited = new Set<string>();
-  walk(source, dir, visited, 0);
+  walk(source, fromFile, visited, 0);
   return Array.from(visited);
 }
 
@@ -73,7 +77,7 @@ export function viteDeckWatchIncludes() {
       } catch {
         return null;
       }
-      const paths = collectIncludePaths(source, dirname(cleanId));
+      const paths = collectIncludePaths(source, cleanId);
       record(cleanId, paths);
       if (server) server.watcher.add(paths);
       return null;

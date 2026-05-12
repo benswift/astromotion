@@ -1,8 +1,28 @@
+import { createRequire } from "node:module";
+import { dirname, resolve } from "node:path";
+
 interface BgModifiers {
   position?: "left" | "right";
   size?: string;
   splitPercent?: string;
   filters?: string;
+}
+
+/**
+ * Resolve an `@include` path against the file requesting it. Relative paths
+ * (`./`, `../`) and absolute paths use the requester's directory; bare module
+ * specifiers (e.g. `astro-theme-anu/partials/foo.mdx`) go through Node's
+ * package resolution starting from the requester.
+ */
+export function resolveIncludePath(includePath: string, fromFile: string): string {
+  if (
+    includePath.startsWith("./") ||
+    includePath.startsWith("../") ||
+    includePath.startsWith("/")
+  ) {
+    return resolve(dirname(fromFile), includePath);
+  }
+  return createRequire(fromFile).resolve(includePath);
 }
 
 export function parseMdxFlowExpression(value: string): string | null {

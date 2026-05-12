@@ -9,6 +9,7 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const fixturesDir = path.join(__dirname, "fixtures");
+const fixturesDeckPath = path.join(fixturesDir, "fixture.deck.mdx");
 const partialPath = path.join(fixturesDir, "includes", "partial.mdx");
 const mainPath = path.join(fixturesDir, "includes", "main.mdx");
 
@@ -22,22 +23,22 @@ function fakeServer() {
 describe("collectIncludePaths", () => {
   it("returns the absolute path of a single include", () => {
     const source = "# Header\n\n{/* @include ./includes/partial.mdx */}\n";
-    expect(collectIncludePaths(source, fixturesDir)).toEqual([partialPath]);
+    expect(collectIncludePaths(source, fixturesDeckPath)).toEqual([partialPath]);
   });
 
   it("recurses into nested includes", () => {
     const source = "{/* @include ./includes/main.mdx */}\n";
-    expect(collectIncludePaths(source, fixturesDir)).toEqual([mainPath, partialPath]);
+    expect(collectIncludePaths(source, fixturesDeckPath)).toEqual([mainPath, partialPath]);
   });
 
   it("ignores non-.mdx include paths", () => {
     const source = "{/* @include ./includes/partial.md */}\n";
-    expect(collectIncludePaths(source, fixturesDir)).toEqual([]);
+    expect(collectIncludePaths(source, fixturesDeckPath)).toEqual([]);
   });
 
   it("returns the path for missing includes (so they're still watched)", () => {
     const source = "{/* @include ./does-not-exist.mdx */}\n";
-    expect(collectIncludePaths(source, fixturesDir)).toEqual([
+    expect(collectIncludePaths(source, fixturesDeckPath)).toEqual([
       path.join(fixturesDir, "does-not-exist.mdx"),
     ]);
   });
@@ -50,12 +51,12 @@ describe("collectIncludePaths", () => {
     const source =
       "{/* @include ./includes/partial.mdx */}\n\n" +
       "{/* @include ./includes/partial.mdx */}\n";
-    expect(collectIncludePaths(source, fixturesDir)).toEqual([partialPath]);
+    expect(collectIncludePaths(source, fixturesDeckPath)).toEqual([partialPath]);
   });
 
   it("ignores non-include MDX flow expressions", () => {
     const source = "{/* notes: speaker note */}\n{/* _class: banner */}\n";
-    expect(collectIncludePaths(source, fixturesDir)).toEqual([]);
+    expect(collectIncludePaths(source, fixturesDeckPath)).toEqual([]);
   });
 });
 
