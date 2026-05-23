@@ -2,6 +2,15 @@
 
 ## 2026-05-23
 
+### `shikiConfig` option
+
+New `shikiConfig: ShikiConfig` option accepts the full Astro shiki shape —
+single `theme` or dual `themes` with optional `defaultColor`. Existing
+`codeTheme` option still works but is deprecated; `shikiConfig` wins if
+both are set. Fixes a long-standing typing bug where the dual-theme shape
+documented in the README didn't typecheck against `codeTheme`'s
+`ShikiConfig["theme"]` declaration.
+
 ### Plugins registered via global markdown config
 
 `deckRemarkPlugins` now goes onto Astro's global `markdown.remarkPlugins`,

@@ -12,6 +12,16 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export interface AstromotionOptions {
   theme?: string;
   injectRoutes?: boolean;
+  /**
+   * Shiki config for deck code blocks. Accepts the full `ShikiConfig`
+   * shape — either a single `theme`, or dual `themes` with optional
+   * `defaultColor`. Defaults to `{ theme: "vitesse-dark" }`.
+   */
+  shikiConfig?: ShikiConfig;
+  /**
+   * @deprecated Use `shikiConfig` instead. Single-theme shortcut; if
+   * `shikiConfig` is also provided, `shikiConfig` wins.
+   */
   codeTheme?: ShikiConfig["theme"];
   /**
    * `cssVariable` names registered via Astro's top-level `fonts` config.
@@ -50,14 +60,11 @@ export function astromotion(options: AstromotionOptions = {}): AstroIntegration 
 
         const hasMdx = config.integrations.some((i) => i.name === "@astrojs/mdx");
         if (!hasMdx) {
+          const shikiConfig: ShikiConfig =
+            options.shikiConfig ??
+            (options.codeTheme ? { theme: options.codeTheme } : { theme: "vitesse-dark" });
           updateConfig({
-            integrations: [
-              mdx({
-                shikiConfig: {
-                  theme: options.codeTheme ?? "vitesse-dark",
-                },
-              }),
-            ],
+            integrations: [mdx({ shikiConfig })],
           });
         }
 

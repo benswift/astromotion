@@ -275,21 +275,23 @@ export default defineConfig({
 astromotion({
   theme: "./src/my-theme.css", // custom theme CSS path (default: built-in black theme)
   injectRoutes: true, // inject /decks/[...slug] route (default: true)
-  codeTheme: "vitesse-dark", // Shiki theme name or object (default: "vitesse-dark")
+  shikiConfig: { theme: "vitesse-dark" }, // full ShikiConfig (default: { theme: "vitesse-dark" })
 });
 ```
 
-The `codeTheme` option accepts a Shiki theme name (string) or an object passed
-directly to `@shikijs/rehype` --- for example, dual light/dark themes:
+The `shikiConfig` option accepts the full Astro `ShikiConfig` shape — single
+theme via `theme`, or dual light/dark themes via `themes`:
 
 ```js
 astromotion({
-  codeTheme: {
+  shikiConfig: {
     themes: { light: anuLight, dark: anuDark },
     defaultColor: false,
   },
 });
 ```
+
+`codeTheme` (a single theme name) is accepted as a deprecated shortcut.
 
 If you set `injectRoutes: false`, you'll need to create your own route pages.
 See `pages/[...slug].astro` in this package for the reference implementation.
