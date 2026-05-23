@@ -1,10 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  collectIncludePaths,
-  viteDeckWatchIncludes,
-} from "../src/vite-plugin-watch-includes.ts";
+import { collectIncludePaths, viteDeckWatchIncludes } from "../src/vite-plugin-watch-includes.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -49,8 +46,7 @@ describe("collectIncludePaths", () => {
 
   it("deduplicates the same include referenced twice", () => {
     const source =
-      "{/* @include ./includes/partial.mdx */}\n\n" +
-      "{/* @include ./includes/partial.mdx */}\n";
+      "{/* @include ./includes/partial.mdx */}\n\n{/* @include ./includes/partial.mdx */}\n";
     expect(collectIncludePaths(source, fixturesDeckPath)).toEqual([partialPath]);
   });
 

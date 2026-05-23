@@ -50,10 +50,5 @@
   "peerDependencies": {
     "@astrojs/mdx": "^5.0.0",
     "astro": "^6.0.0"
-  },
-  "pnpm": {
-    "overrides": {
-      "vite": "^8.0.5"
-    }
   }
 }

@@ -80,10 +80,7 @@ body
     );
     expect(splitLayout).toBeDefined();
     const splitImage = findChild(splitLayout, (n) => classOf(n) === "split-image");
-    const splitContent = findChild(
-      splitLayout,
-      (n) => classOf(n) === "split-content",
-    );
+    const splitContent = findChild(splitLayout, (n) => classOf(n) === "split-content");
     expect(splitImage).toBeDefined();
     expect(splitContent).toBeDefined();
   });

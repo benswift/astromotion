@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-05-23
+
+### Plugins registered via global markdown config
+
+`deckRemarkPlugins` now goes onto Astro's global `markdown.remarkPlugins`,
+which `@astrojs/mdx` inherits by default (`extendMarkdownConfig: true`).
+Previously astromotion only attached the plugins when it owned the mdx
+integration; when a theme registered mdx first, the deck plugins silently
+fell off and decks rendered as plain MDX (no `<section>` wrapping, `@include`
+directives ignored). Each plugin still gates itself on `endsWith(".deck.mdx")`
+so the change is a no-op for regular `.md` / `.mdx` files.
+
+### `@include` strips yaml frontmatter
+
+When `{/* @include ./topic.mdx */}` splices an included file's content into
+a deck, YAML and TOML frontmatter on the included file are now removed
+automatically. This lets a single `.mdx` file double as a standalone Astro
+content entry (with frontmatter) and as a deck slide partial.
+
 ## 2026-05-12
 
 ### `@include` supports bare module specifiers
@@ -16,8 +35,7 @@ Existing relative paths (`./`, `../`, `/`) behave exactly as before.
 ### Refresh dependencies
 
 Bumped all dependencies to latest, notably `reveal.js` 5.2 → 6.0 (matches what
-consumers like llms-unplugged were already pinning) and `@shikijs/rehype` 3 →
-4. Also added the previously missing `remark-smartypants` direct dep that the
+consumers like llms-unplugged were already pinning) and `@shikijs/rehype` 3 → 4. Also added the previously missing `remark-smartypants` direct dep that the
 plugin pipeline test was importing.
 
 Reveal 6 dropped the `dist/` segment from its package exports, so the CSS

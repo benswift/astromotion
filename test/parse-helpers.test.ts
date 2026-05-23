@@ -187,9 +187,7 @@ describe("parseNotesDirectiveMdx", () => {
   });
 
   it("handles multiline notes content", () => {
-    expect(parseNotesDirectiveMdx("/* notes:\nspeaker note text\n*/")).toBe(
-      "speaker note text",
-    );
+    expect(parseNotesDirectiveMdx("/* notes:\nspeaker note text\n*/")).toBe("speaker note text");
   });
 });
 

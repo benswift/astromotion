@@ -36,10 +36,13 @@ export default defineConfig({
 });
 ```
 
-The integration registers `@astrojs/mdx` with the custom remark plugins,
-injects the `/decks/[...slug]` catch-all route, and resolves your theme CSS.
-Slides are server-rendered HTML by default; interactive components opt in to
-client-side hydration per component via Astro's `client:*` directives.
+The integration registers `@astrojs/mdx` (only if no other integration has
+already done so) and adds the deck remark plugins to Astro's global
+markdown config, so it composes cleanly with themes that register mdx
+themselves. It also injects the `/decks/[...slug]` catch-all route and
+resolves your theme CSS. Slides are server-rendered HTML by default;
+interactive components opt in to client-side hydration per component via
+Astro's `client:*` directives.
 
 **Important:** deck pages must not use Astro's `<ClientRouter />` --- it
 conflicts with Reveal.js keyboard navigation.
@@ -89,7 +92,7 @@ Reveal.js `<section>` element.
 
 ### Minimal example
 
-````mdx
+```mdx
 ---
 title: My Deck
 ---
@@ -113,7 +116,7 @@ import MyWidget from "../components/MyWidget.svelte";
 **Big statement slide**
 
 {/* notes: This is a speaker note. <em>HTML is supported.</em> */}
-````
+```
 
 ### Directives
 
@@ -271,8 +274,8 @@ export default defineConfig({
 ```ts
 astromotion({
   theme: "./src/my-theme.css", // custom theme CSS path (default: built-in black theme)
-  injectRoutes: true,          // inject /decks/[...slug] route (default: true)
-  codeTheme: "vitesse-dark",   // Shiki theme name or object (default: "vitesse-dark")
+  injectRoutes: true, // inject /decks/[...slug] route (default: true)
+  codeTheme: "vitesse-dark", // Shiki theme name or object (default: "vitesse-dark")
 });
 ```
 

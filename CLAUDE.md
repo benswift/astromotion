@@ -29,7 +29,9 @@ is the slide content.
    by splicing the included AST in-place (must run first so later plugins see
    the full content). Accepts both relative paths and bare module specifiers
    (e.g. `astro-theme-anu/partials/foo.mdx`), the latter resolved via Node's
-   package resolution starting from the requesting file.
+   package resolution starting from the requesting file. YAML/TOML frontmatter
+   on the included file is stripped automatically, so partials can double as
+   standalone Astro content with frontmatter.
 2. `remarkDeckSections` --- wraps content between `---` thematic breaks in
    `<section>` elements
 3. `remarkDeckClasses` --- converts `{/* _class: name */}` expressions to
@@ -63,11 +65,11 @@ props. Reveal.js is initialised inline in the route's `<script>` tag.
 MDX does not support HTML comments (`<!-- -->`). Directives use MDX expression
 comment syntax instead:
 
-| Directive         | Syntax                             |
-| ----------------- | ---------------------------------- |
-| Include           | `{/* @include ./path.mdx */}` or `{/* @include pkg/foo.mdx */}` |
-| Slide class       | `{/* _class: name */}`             |
-| Speaker notes     | `{/* notes: ...HTML body... */}`   |
+| Directive     | Syntax                                                          |
+| ------------- | --------------------------------------------------------------- |
+| Include       | `{/* @include ./path.mdx */}` or `{/* @include pkg/foo.mdx */}` |
+| Slide class   | `{/* _class: name */}`                                          |
+| Speaker notes | `{/* notes: ...HTML body... */}`                                |
 
 Background images (`![bg ...](url)`), QR images (`![qr](url)`), and slide
 separators (`---`) are unchanged from the previous format.

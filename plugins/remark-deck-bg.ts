@@ -48,11 +48,7 @@ function attr(name: string, value: string): MdxJsxAttribute {
   return { type: "mdxJsxAttribute", name, value };
 }
 
-function div(
-  className: string,
-  style: string | null,
-  children: RootContent[],
-): MdxJsxFlowElement {
+function div(className: string, style: string | null, children: RootContent[]): MdxJsxFlowElement {
   const attrs: MdxJsxAttribute[] = [attr("class", className)];
   if (style) attrs.push(attr("style", style));
   return { type: "mdxJsxFlowElement", name: "div", attributes: attrs, children };
