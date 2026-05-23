@@ -25,7 +25,7 @@ npm install github:benswift/astromotion
 
 ## Setup
 
-In your `astro.config.mjs`:
+In your `astro.config.ts`:
 
 ```js
 import { defineConfig } from "astro/config";
@@ -255,7 +255,7 @@ Reveal.js `--r-*` variables should stay in their respective files.
 ### Font loading
 
 The theme CSS should only _reference_ fonts (via `font-family`), not _load_
-them. Use Astro's built-in font system in your `astro.config.mjs`:
+them. Use Astro's built-in font system in your `astro.config.ts`:
 
 ```js
 export default defineConfig({
