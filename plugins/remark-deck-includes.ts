@@ -31,7 +31,7 @@ function resolveIncludesIn(root: Root, fromFile: string, depth: number): void {
     const content = readFileSync(absPath, "utf-8");
     const includeRoot = mdxParseProcessor.parse(content);
     resolveIncludesIn(includeRoot, absPath, depth + 1);
-    const contentNodes = includeRoot.children.filter((n) => n.type !== "yaml" && n.type !== "toml");
+    const contentNodes = includeRoot.children.filter((n) => !["yaml", "toml"].includes(n.type));
     root.children.splice(i, 1, ...contentNodes);
   }
 }
