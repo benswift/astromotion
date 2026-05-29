@@ -5,5 +5,6 @@ minimumReleaseAgeExclude:
   - '@astrojs/internal-helpers@0.10.0'
   - '@astrojs/markdown-remark@7.2.0'
   - astro@6.4.2
+  - '@astrojs/mdx@6.0.1'
 overrides:
   vite: ^8.0.5

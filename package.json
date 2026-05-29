@@ -34,7 +34,7 @@
     "yaml": "^2.9.0"
   },
   "devDependencies": {
-    "@astrojs/mdx": "^5.0.6",
+    "@astrojs/mdx": "^6.0.1",
     "@e18e/eslint-plugin": "^0.5.0",
     "astro": "^6.4.2",
     "eslint-plugin-no-only-tests": "^3.4.0",
@@ -48,7 +48,7 @@
     "vitest": "^4.1.7"
   },
   "peerDependencies": {
-    "@astrojs/mdx": "^5.0.0",
+    "@astrojs/mdx": "^5.0.0 || ^6.0.0",
     "astro": "^6.0.0"
   },
   "engines": {
