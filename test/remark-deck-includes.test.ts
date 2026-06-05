@@ -73,4 +73,22 @@ describe("remarkDeckIncludes", () => {
     const headings = tree.children.filter((n: any) => n.type === "heading");
     expect(headings.map((h: any) => h.children[0].value)).toEqual(["Greeting from node_modules"]);
   });
+
+  it("strips source positions from spliced-in nodes", async () => {
+    const input = "# Deck\n\n{/* @include ./fixtures/includes/partial.mdx */}\n";
+    const tree = unified().use(remarkParse).use(remarkMdx).parse(input);
+    await unified()
+      .use(remarkDeckIncludes)
+      .run(tree, { path: path.join(__dirname, "main.deck.mdx") });
+    // The deck's own heading keeps its position; the spliced-in heading does
+    // not, since its offset referenced the partial file rather than the deck.
+    const own = tree.children.find(
+      (n: any) => n.type === "heading" && n.children[0].value === "Deck",
+    );
+    const spliced = tree.children.find(
+      (n: any) => n.type === "heading" && n.children[0].value === "Partial heading",
+    );
+    expect((own as any).position).toBeDefined();
+    expect((spliced as any).position).toBeUndefined();
+  });
 });

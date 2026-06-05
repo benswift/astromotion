@@ -7,6 +7,7 @@ import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkMdx from "remark-mdx";
 import remarkSmartypants from "remark-smartypants";
+import remarkDirective from "remark-directive";
 import { deckRemarkPlugins } from "../plugins/index.ts";
 
 async function runPipeline(input: string, filePath: string): Promise<Root> {
@@ -28,6 +29,10 @@ function collectText(tree: Root): string[] {
 
 function classOf(node: any): string | undefined {
   return node?.attributes?.find((a: any) => a.name === "class")?.value;
+}
+
+function styleOf(node: any): string | undefined {
+  return node?.attributes?.find((a: any) => a.name === "style")?.value;
 }
 
 function findChild(parent: any, predicate: (n: any) => boolean): any {
@@ -110,5 +115,53 @@ body
     expect(texts.some((t) => t.includes("---"))).toBe(false);
     expect(texts.some((t) => t.includes("intro—one"))).toBe(true);
     expect(texts.some((t) => t.includes("that’s it—the spread"))).toBe(true);
+  });
+
+  it("keeps split bg working when remark-directive strips the alt's :token", async () => {
+    // A consuming pipeline (e.g. astro-theme-anu) enables remark-directive for
+    // `::: callout` containers. Its micromark extension parses the `:40` in an
+    // inline `![bg right:40%]` as a `:40` text directive and drops it, so the
+    // image alt arrives as `bg right%` -- which used to silently turn the slide
+    // fullscreen. remarkDeckBg must recover the real modifiers from the source.
+    // @include partials are parsed without remark-directive, so their alts stay
+    // intact and must keep splitting too.
+    const dir = mkdtempSync(join(tmpdir(), "astromotion-bg-"));
+    writeFileSync(join(dir, "partial.mdx"), "## Included\n\n![bg left:30%](./inc.jpg)\n\nbody\n");
+    const input = `# Inline
+
+![bg right:40%](./side.jpg)
+
+body
+
+---
+
+{/* @include ./partial.mdx */}
+`;
+    const processor = unified()
+      .use(remarkParse)
+      .use(remarkMdx)
+      .use(remarkDirective) // consumer enables this for ::: containers
+      .use(deckRemarkPlugins);
+    const tree = processor.parse(input) as Root;
+
+    // Sanity: confirm remark-directive really did mangle the inline alt.
+    const inlinePara = findChild(
+      tree,
+      (n) => n.type === "paragraph" && n.children?.[0]?.type === "image",
+    );
+    expect(inlinePara.children[0].alt).toBe("bg right%");
+
+    await processor.run(tree, { path: join(dir, "deck.deck.mdx"), value: input });
+    const [s1, s2] = tree.children as any[];
+
+    const inlineSplit = findChild(s1, (n) => classOf(n) === "split-layout");
+    expect(inlineSplit).toBeDefined();
+    const inlineImage = findChild(inlineSplit, (n) => classOf(n) === "split-image");
+    expect(styleOf(inlineImage)).toContain("width: 40%");
+
+    const includedSplit = findChild(s2, (n) => classOf(n) === "split-layout");
+    expect(includedSplit).toBeDefined();
+    const includedImage = findChild(includedSplit, (n) => classOf(n) === "split-image");
+    expect(styleOf(includedImage)).toContain("width: 30%");
   });
 });

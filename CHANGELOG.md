@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-06-05
+
+### Fix: inline `![bg right:40%]` split lost when remark-directive is enabled
+
+Consumers that register `remark-directive` (e.g. astro-theme-anu, for `:::`
+callout containers) broke inline split backgrounds. Its micromark extension
+parses the `:40` in an inline `![bg right:40%]` as a `:40` text directive and
+drops it, so the alt reached `remarkDeckBg` as `bg right%` and the slide
+silently rendered fullscreen instead of a 40% split (`blur:`/`brightness:`/
+`saturate:` filter modifiers were mangled the same way). `@include` partials
+were unaffected because `remarkDeckIncludes` parses them with its own processor
+that has no `remark-directive` --- which is why split backgrounds only worked
+from partials, not the main deck. `remarkDeckIncludes` now strips source
+positions from spliced `@include` nodes (their offsets referenced the partial,
+not the deck), and `remarkDeckBg` re-reads an inline image's alt from the raw
+deck source (`file.value`) via its source offset --- only for genuine inline
+images, which are the ones that still carry a position. Inline and included
+split backgrounds now behave identically.
+
 ## 2026-06-03
 
 ### `_if` directive for query-param-gated slides

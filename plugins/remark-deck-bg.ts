@@ -32,16 +32,37 @@ interface MdxJsxFlowElement {
   children: RootContent[];
 }
 
-function asBgImageParagraph(node: RootContent): BgImage | null {
+// Recover an inline bg image's alt straight from the deck source.
+//
+// When a consuming pipeline parses deck content with remark-directive enabled
+// (e.g. for `::: callout` containers), a `:token` inside an inline image's alt
+// is parsed as a text directive and dropped --- `![bg right:40%]` reaches this
+// plugin as `bg right%`, silently losing the split (and any blur:/brightness:
+// filters). The raw source (`file.value`) is never rewritten by tree
+// transforms, so re-read the alt from the image node's source offset.
+//
+// remarkDeckIncludes strips positions from @include-spliced nodes (their offsets
+// pointed into a different file), so a missing offset means "use the parsed alt
+// as-is" --- already correct, since partials are parsed without remark-directive.
+function rawImageAlt(img: Image, file: { value?: unknown }): string {
+  const alt = img.alt ?? "";
+  const offset = img.position?.start?.offset;
+  const src = typeof file.value === "string" ? file.value : null;
+  if (offset === undefined || src === null || !src.startsWith("![", offset)) return alt;
+  const altEnd = src.indexOf("](", offset + 2);
+  return altEnd === -1 ? alt : src.slice(offset + 2, altEnd);
+}
+
+function asBgImageParagraph(node: RootContent, file: { value?: unknown }): BgImage | null {
   if (node.type !== "paragraph") return null;
   const para = node as Paragraph;
   if (para.children.length !== 1) return null;
   const child = para.children[0];
   if (child.type !== "image") return null;
   const img = child as Image;
-  if (!img.alt?.startsWith("bg")) return null;
-  const modifiers = img.alt.slice(2);
-  return { url: img.url, ...parseBgModifiers(modifiers) };
+  const alt = rawImageAlt(img, file);
+  if (!alt.startsWith("bg")) return null;
+  return { url: img.url, ...parseBgModifiers(alt.slice(2)) };
 }
 
 function attr(name: string, value: string): MdxJsxAttribute {
@@ -73,7 +94,7 @@ function splitImageStyle(img: BgImage): string {
 }
 
 export function remarkDeckBg() {
-  return (tree: Root, file: { path?: string }) => {
+  return (tree: Root, file: { path?: string; value?: unknown }) => {
     if (!file.path?.endsWith(".deck.mdx")) return;
     for (const section of tree.children) {
       if ((section as any).type !== "mdxJsxFlowElement" || (section as any).name !== "section")
@@ -82,7 +103,7 @@ export function remarkDeckBg() {
       const bgImages: BgImage[] = [];
       const remaining: RootContent[] = [];
       for (const child of sec.children as RootContent[]) {
-        const img = asBgImageParagraph(child);
+        const img = asBgImageParagraph(child, file);
         if (img) {
           img.url = resolveAssetUrl(img.url, file.path);
           bgImages.push(img);

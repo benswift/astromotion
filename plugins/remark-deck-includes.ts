@@ -15,6 +15,21 @@ const mdxParseProcessor = unified()
   .use(remarkFrontmatter)
   .use(remarkMdx);
 
+// Included content is parsed from a *different* source file, so its node
+// positions point into that file --- meaningless (and misleading) once spliced
+// into the deck's vfile. Drop them so downstream plugins can treat "has a
+// position" as "came from the deck's own source" --- e.g. remarkDeckBg re-reads
+// an image's raw alt from file.value for genuine inline images only.
+function stripPositions(node: { position?: unknown; children?: unknown[] }): void {
+  delete node.position;
+  const children = node.children;
+  if (Array.isArray(children)) {
+    for (const child of children) {
+      stripPositions(child as { position?: unknown; children?: unknown[] });
+    }
+  }
+}
+
 function resolveIncludesIn(root: Root, fromFile: string, depth: number): void {
   if (depth > MAX_DEPTH) return;
   for (let i = root.children.length - 1; i >= 0; i--) {
@@ -32,6 +47,7 @@ function resolveIncludesIn(root: Root, fromFile: string, depth: number): void {
     const includeRoot = mdxParseProcessor.parse(content);
     resolveIncludesIn(includeRoot, absPath, depth + 1);
     const contentNodes = includeRoot.children.filter((n) => !["yaml", "toml"].includes(n.type));
+    for (const contentNode of contentNodes) stripPositions(contentNode);
     root.children.splice(i, 1, ...contentNodes);
   }
 }
