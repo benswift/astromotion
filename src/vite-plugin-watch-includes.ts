@@ -35,6 +35,7 @@ export function collectIncludePaths(source: string, fromFile: string): string[] 
 }
 
 type ViteServer = {
+  moduleGraph: { onFileChange: (file: string) => void };
   watcher: { add: (paths: string | string[]) => void };
   ws: { send: (payload: { type: "full-reload"; path?: string }) => void };
 };
@@ -85,6 +86,12 @@ export function viteDeckWatchIncludes() {
     handleHotUpdate(ctx: { file: string }) {
       const decks = decksByInclude.get(ctx.file);
       if (!decks || decks.size === 0 || !server) return;
+      // Invalidate each parent deck's compiled module before reloading;
+      // without this the dev server re-serves the stale compiled MDX and the
+      // full-reload shows no change.
+      for (const deck of decks) {
+        server.moduleGraph.onFileChange(deck);
+      }
       server.ws.send({ type: "full-reload" });
       return [];
     },

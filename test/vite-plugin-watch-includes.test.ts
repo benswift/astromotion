@@ -12,6 +12,7 @@ const mainPath = path.join(fixturesDir, "includes", "main.mdx");
 
 function fakeServer() {
   return {
+    moduleGraph: { onFileChange: vi.fn() },
     watcher: { add: vi.fn() },
     ws: { send: vi.fn() },
   };
@@ -107,6 +108,19 @@ describe("viteDeckWatchIncludes plugin", () => {
     expect(server.ws.send).toHaveBeenCalledWith({ type: "full-reload" });
   });
 
+  it("invalidates each parent deck module when a tracked include changes", () => {
+    const plugin = viteDeckWatchIncludes();
+    const server = fakeServer();
+    plugin.configureServer(server);
+    const deckId = path.join(fixturesDir, "with-mdx-include.deck.mdx");
+    plugin.transform.call({}, "ignored", deckId);
+    plugin.handleHotUpdate({ file: partialPath });
+    expect(server.moduleGraph.onFileChange).toHaveBeenCalledWith(deckId);
+    const sendOrder = server.ws.send.mock.invocationCallOrder[0]!;
+    const invalidateOrder = server.moduleGraph.onFileChange.mock.invocationCallOrder[0]!;
+    expect(invalidateOrder).toBeLessThan(sendOrder);
+  });
+
   it("does not send full-reload for unrelated file changes", () => {
     const plugin = viteDeckWatchIncludes();
     const server = fakeServer();
@@ -115,5 +129,6 @@ describe("viteDeckWatchIncludes plugin", () => {
     plugin.transform.call({}, "ignored", deckId);
     plugin.handleHotUpdate({ file: path.join(fixturesDir, "unrelated.mdx") });
     expect(server.ws.send).not.toHaveBeenCalled();
+    expect(server.moduleGraph.onFileChange).not.toHaveBeenCalled();
   });
 });

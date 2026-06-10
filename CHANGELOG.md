@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-06-10
+
+### Fix: deck partial edits now show up in the dev server
+
+Editing an `@include` partial sent a full-reload but the browser came back
+with stale content: the dev server's compiled parent `.deck.mdx` module was
+never invalidated, so the reload re-served the output compiled before the
+edit. `astromotion:watch-includes` now calls `moduleGraph.onFileChange()` for
+every deck whose (transitive) include set contains the changed file before
+sending the full-reload, so a partial edit behaves like an edit to the deck
+itself. Verified against astro 6.4.4 / @astrojs/mdx 6.0.2 in llms-unplugged.
+
 ## 2026-06-05
 
 ### Fix: inline `![bg right:40%]` split lost when remark-directive is enabled
