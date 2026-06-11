@@ -37,6 +37,7 @@ const { Content, frontmatter } = Astro.props;
 
 <script>
   import Reveal from "reveal.js";
+  import RevealNotes from "reveal.js/plugin/notes";
 
   // Drop slides gated behind an `_if:` directive whose query param is absent
   // from the deck URL, before Reveal reads the DOM — so slide indices and
@@ -62,6 +63,7 @@ const { Content, frontmatter } = Astro.props;
     viewDistance: 10,
     maxScale: 4,
     scrollActivationWidth: null,
+    plugins: [RevealNotes],
   });
   deck.initialize();
 </script>

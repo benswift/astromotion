@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-06-11
+
+### Feature: speaker notes now show in the Reveal.js speaker view
+
+`{/* notes: ... */}` directives were emitted as `<div class="notes">`, but the
+deck route registered no Reveal plugins, so pressing **S** opened nothing and
+the notes (hidden by consuming themes) surfaced nowhere. The route now
+registers Reveal's notes plugin, and `remarkDeckNotes` emits
+`<aside class="notes" aria-hidden="true">` --- the element the plugin reads ---
+so the speaker view (current slide, next slide, notes, timer) works. Reveal
+core CSS hides `aside.notes` (`display:none`) so the audience never sees it,
+and `aria-hidden` keeps the presenter-only aside from registering as a
+complementary landmark in static a11y scans (which don't apply reveal's CSS).
+HTML in the notes body is preserved.
+
 ## 2026-06-10
 
 ### Fix: deck partial edits now show up in the dev server

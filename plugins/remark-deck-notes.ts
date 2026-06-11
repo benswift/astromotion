@@ -21,10 +21,19 @@ export function remarkDeckNotes() {
         newChildren.push(child);
       }
       if (notesContent !== null) {
+        // `<aside class="notes">` is the element Reveal's notes plugin reads
+        // for the speaker view; reveal core CSS hides it (`display:none`) so
+        // the audience never sees it. `aria-hidden` is needed too: the notes
+        // are presenter-only, and a static a11y scan (which doesn't apply
+        // reveal's CSS, so it treats the aside as visible) would otherwise flag
+        // it as a complementary landmark nested inside <main>.
         newChildren.push({
           type: "mdxJsxFlowElement",
-          name: "div",
-          attributes: [{ type: "mdxJsxAttribute", name: "class", value: "notes" }],
+          name: "aside",
+          attributes: [
+            { type: "mdxJsxAttribute", name: "class", value: "notes" },
+            { type: "mdxJsxAttribute", name: "aria-hidden", value: "true" },
+          ],
           children: [{ type: "html", value: notesContent } as any],
         } as any);
       }

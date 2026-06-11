@@ -41,7 +41,8 @@ is the slide content.
    expressions to `data-auto-animate` (and `data-auto-animate-id`) attributes on
    the enclosing section, enabling Reveal.js auto-animate between adjacent slides
 5. `remarkDeckNotes` --- converts `{/* notes: ...HTML... */}` expressions to
-   `<div class="notes">` elements inside the section
+   `<aside class="notes">` elements inside the section (the element Reveal's
+   notes plugin reads for the speaker view)
 6. `remarkDeckQr` --- converts `![qr](url)` images to inline SVG QR codes
 7. `remarkDeckBg` --- converts `![bg ...](url)` images to background elements
    and split layouts
@@ -98,8 +99,13 @@ deployments --- this is intentional to fail early rather than mask content bugs.
   `theme/base.css` so consuming themes can use `place-content: center` on
   sections (Reveal sets `display` inline on the active section, so the config
   option is what propagates `grid` rather than the default `block`).
-- Speaker notes use `<div class="notes">` not `<aside class="notes">` to avoid
-  a11y landmark violations in consuming projects.
+- Speaker notes render as `<aside class="notes" aria-hidden="true">` and the
+  deck route registers Reveal's notes plugin, so the speaker view (press **S**)
+  shows them. Reveal core CSS hides `aside.notes` (`display:none`) so the
+  audience never sees it; `aria-hidden` keeps the presenter-only aside from
+  registering as a complementary landmark in static a11y scans (which don't
+  apply reveal's CSS, so they'd otherwise treat the aside as a visible
+  landmark nested inside `<main>`).
 - Deck pages must not use Astro's `<ClientRouter />` (conflicts with Reveal.js
   keyboard navigation).
 
