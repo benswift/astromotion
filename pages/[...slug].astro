@@ -39,6 +39,8 @@ const { Content, frontmatter } = Astro.props;
   import Reveal from "reveal.js";
   import RevealNotes from "reveal.js/plugin/notes";
 
+  import { keepAwakeInFullscreen } from "../src/keep-awake";
+
   // Drop slides gated behind an `_if:` directive whose query param is absent
   // from the deck URL, before Reveal reads the DOM — so slide indices and
   // `#/` hashes count only the slides that survive. A slide tagged
@@ -66,4 +68,5 @@ const { Content, frontmatter } = Astro.props;
     plugins: [RevealNotes],
   });
   deck.initialize();
+  keepAwakeInFullscreen();
 </script>

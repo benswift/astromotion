@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-06-30
+
+### Feature: keep the display awake while presenting fullscreen
+
+Laptops dim and sleep the screen on an idle timer, and a presentation runs for
+minutes at a time with no pointer or keyboard activity --- so the display would
+sleep mid-slide. The deck route now uses the Screen Wake Lock API to hold the
+display on while the deck is fullscreen, re-acquiring the lock when the page
+returns to the foreground (the browser releases it automatically when the tab is
+hidden). The lock is scoped to fullscreen because that's when a deck is actually
+being shown, and because entering fullscreen is the user gesture the API needs
+to grant the request. Best-effort: unsupported browsers and rejected requests
+fall back to the OS idle behaviour. No deck content or syntax changes.
+
 ## 2026-06-23
 
 ### Breaking: require Astro 7 and @astrojs/mdx 7
